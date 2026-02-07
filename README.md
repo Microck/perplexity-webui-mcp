@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://www.perplexity.ai/favicon.ico" alt="perplexity-oauth-mcp" width="100">
+  <img src="https://www.perplexity.ai/favicon.ico" alt="perplexity-webui-mcp" width="100">
 </p>
 
-<h1 align="center">perplexity-oauth-mcp</h1>
+<h1 align="center">perplexity-webui-mcp</h1>
 
 <p align="center">
   mcp server for querying perplexity pro via webui session token.
@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="license">
   <img src="https://img.shields.io/badge/language-typescript-blue" alt="language">
-  <img src="https://img.shields.io/badge/npm-perplexity--oauth--mcp-orange" alt="npm">
+  <img src="https://img.shields.io/badge/npm-perplexity--webui--mcp-orange" alt="npm">
   <img src="https://img.shields.io/badge/mcp-sdk-orange" alt="mcp">
   <a href="https://github.com/Microck/opencode-studio"><img src="https://img.shields.io/badge/opencode-studio-brown?logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAABiElEQVR4nF2Sv0tWcRTGPyeVIpCWwmyJGqQagsqCsL2hhobsD3BvdWhoj%2F6CiIKaoqXBdMjKRWwQgqZ%2BokSvkIhg9BOT9xPn9Vx79cD3cu6953zP8zznCQB1V0S01d3AKeAKcBVYA94DjyJioru2k9SHE%2Bqc%2Bkd9rL7yf7TUm%2BpQ05yPUM%2Bo626Pp%2BqE2q7GGfWrOpjNnWnAOPAGeAK8Bb4U5D3AJ%2BAQsAAMAHfVvl7gIrAf2Kjiz8BZYB3YC%2FwFpoGDwHfgEnA0oU7tgHiheEShyXxY%2FVn%2Fn6ljye8DcBiYAloRcV3tAdrV1xMRG%2Bo94DywCAwmx33AJHASWK7iiAjzNFOBl7WapPYtYdyo8RlLqVpOVPvq9KoH1NUuOneycaRefqnP1ftdUyiOt5KS%2BqLWdDpVzTXMl5It4Jr6u%2BQ%2FnhyBc8C7jpowGxGvmxuPqT9qyYuFIKdP71B8WT3SOKexXLrntvqxq3BefaiuFMQ0wqZftxl3M78MjBasfiDN%2FSAi0kFbtf8ACtKBWZBDoJEAAAAASUVORK5CYII%3D" alt="Add with OpenCode Studio" /></a>
 </p>
@@ -25,7 +25,7 @@ this is a local mcp server (stdio transport). your mcp client spawns it as a pro
 manual run:
 
 ```bash
-PERPLEXITY_SESSION_TOKEN="your_token_here" npx perplexity-oauth-mcp
+PERPLEXITY_SESSION_TOKEN="your_token_here" npx perplexity-webui-mcp
 ```
 
 > **important:** this uses perplexity's internal webui api with a session cookie. for personal/local tinkering only - not affiliated with perplexity ai.
@@ -34,7 +34,7 @@ PERPLEXITY_SESSION_TOKEN="your_token_here" npx perplexity-oauth-mcp
 
 ### overview
 
-perplexity-oauth-mcp lets your ai assistant (claude, opencode, etc) query perplexity pro using your logged-in session. it supports all perplexity pro models including deep research, gpt-5.2, claude 4.5, gemini 3, grok 4.1, and more.
+perplexity-webui-mcp lets your ai assistant (claude, opencode, etc) query perplexity pro using your logged-in session. it supports all perplexity pro models including deep research, gpt-5.2, claude 4.5, gemini 3, grok 4.1, and more.
 
 ---
 
@@ -43,14 +43,14 @@ perplexity-oauth-mcp lets your ai assistant (claude, opencode, etc) query perple
 paste this into your llm agent session:
 
 ```
-Install and configure perplexity-oauth-mcp by following the instructions here:
-https://raw.githubusercontent.com/Microck/perplexity-oauth-mcp/refs/heads/master/INSTALL.md
+Install and configure perplexity-webui-mcp by following the instructions here:
+https://raw.githubusercontent.com/Microck/perplexity-webui-mcp/refs/heads/master/INSTALL.md
 ```
 
 **npm (recommended)**
 
 ```bash
-npm install -g perplexity-oauth-mcp
+npm install -g perplexity-webui-mcp
 ```
 
 ---
@@ -60,8 +60,8 @@ npm install -g perplexity-oauth-mcp
 **from source**
 
 ```bash
-git clone https://github.com/Microck/perplexity-oauth-mcp.git
-cd perplexity-oauth-mcp
+git clone https://github.com/Microck/perplexity-webui-mcp.git
+cd perplexity-webui-mcp
 npm install
 npm run build
 ```
@@ -70,10 +70,22 @@ npm run build
 
 ### getting your session token
 
+**fastest method (automatic via CLI):**
+
+```bash
+uvx --from "perplexity-webui-scraper@latest" get-perplexity-session-token
+```
+
+this interactive CLI asks for your email, handles OTP/magic-link verification, and prints the session token.
+
+**manual method (browser):**
+
 1. open [perplexity.ai](https://www.perplexity.ai) in your browser and log in
 2. open devtools (f12 or cmd+opt+i)
 3. go to **application** > **cookies** > `https://www.perplexity.ai`
 4. copy the value of `__Secure-next-auth.session-token`
+
+> powered by token extraction flow from: https://github.com/henrique-coder/perplexity-webui-scraper
 
 ---
 
@@ -87,7 +99,7 @@ because this server uses `stdio`, you configure it as a local command and pass t
 {
   "mcpServers": {
     "perplexity": {
-      "command": "perplexity-oauth-mcp",
+      "command": "perplexity-webui-mcp",
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "your_session_token_here"
       }
@@ -103,7 +115,7 @@ because this server uses `stdio`, you configure it as a local command and pass t
   "mcpServers": {
     "perplexity": {
       "command": "node",
-      "args": ["/path/to/perplexity-oauth-mcp/dist/index.js"],
+      "args": ["/path/to/perplexity-webui-mcp/dist/index.js"],
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "your_session_token_here"
       }
@@ -166,12 +178,24 @@ because this server uses `stdio`, you configure it as a local command and pass t
 | **clarifying questions error** | deep research mode needs clarifying answers - use a simpler model |
 | **timeout** | deep research can take several minutes - be patient |
 
+### verify both modes quickly
+
+```bash
+PERPLEXITY_SESSION_TOKEN="your_token_here" npm run self-test
+```
+
+this checks both:
+- regular search (`best`)
+- deep research (`deep_research`)
+
+and prints pass/fail per mode.
+
 ---
 
 ### project structure
 
 ```
-perplexity-oauth-mcp/
+perplexity-webui-mcp/
 ├── src/
 │   └── index.ts      # main server + tool implementation
 ├── package.json
@@ -194,3 +218,9 @@ mit
 ### author
 
 [Microck](https://github.com/Microck)
+
+---
+
+### shoutout
+
+special thanks to [henrique-coder/perplexity-webui-scraper](https://github.com/henrique-coder/perplexity-webui-scraper) for the WebUI reverse-engineering and token CLI workflow that helped this project.

@@ -1,4 +1,4 @@
-# perplexity-oauth-mcp Installation Guide
+# perplexity-webui-mcp Installation Guide
 
 ## Prerequisites
 - Node.js 18+
@@ -9,19 +9,29 @@
 ### 1. Install the package globally
 
 ```bash
-npm install -g perplexity-oauth-mcp
+npm install -g perplexity-webui-mcp
 ```
 
 Or clone and build from source:
 
 ```bash
-git clone https://github.com/Microck/perplexity-oauth-mcp.git
-cd perplexity-oauth-mcp
+git clone https://github.com/Microck/perplexity-webui-mcp.git
+cd perplexity-webui-mcp
 npm install
 npm run build
 ```
 
 ### 2. Get your Perplexity session token
+
+**Fastest (automatic CLI):**
+
+```bash
+uvx --from "perplexity-webui-scraper@latest" get-perplexity-session-token
+```
+
+This interactive tool asks for your email, handles verification, and prints your token.
+
+**Manual (browser):**
 
 1. Open [perplexity.ai](https://www.perplexity.ai) in your browser and log in
 2. Open DevTools (F12 or Cmd+Opt+I)
@@ -38,7 +48,7 @@ Add this to your MCP client configuration (e.g., `claude_desktop_config.json`, `
 {
   "mcpServers": {
     "perplexity": {
-      "command": "perplexity-oauth-mcp",
+      "command": "perplexity-webui-mcp",
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE"
       }
@@ -54,7 +64,7 @@ Add this to your MCP client configuration (e.g., `claude_desktop_config.json`, `
   "mcpServers": {
     "perplexity": {
       "command": "node",
-      "args": ["/path/to/perplexity-oauth-mcp/dist/index.js"],
+      "args": ["/path/to/perplexity-webui-mcp/dist/index.js"],
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE"
       }
@@ -73,6 +83,12 @@ Ask your AI assistant to search something using Perplexity:
 
 > "Use perplexity to search for the latest news about AI"
 
+Or run the built-in mode test directly:
+
+```bash
+PERPLEXITY_SESSION_TOKEN="YOUR_TOKEN_HERE" npm run self-test
+```
+
 ---
 
 ## Troubleshooting
@@ -80,9 +96,14 @@ Ask your AI assistant to search something using Perplexity:
 | Problem | Solution |
 |---------|----------|
 | Token invalid / 401 | Get a fresh token from browser cookies |
-| Command not found | Run `npm install -g perplexity-oauth-mcp` again |
+| Command not found | Run `npm install -g perplexity-webui-mcp` again |
 | No answer returned | Check if Perplexity is blocking requests (rate limits) |
 | Timeout | Deep research can take several minutes - be patient |
+
+## Acknowledgment
+
+This project was built with help from:
+- https://github.com/henrique-coder/perplexity-webui-scraper
 
 ## Environment Variables
 

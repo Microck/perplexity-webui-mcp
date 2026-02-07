@@ -418,7 +418,7 @@ async function perplexitySearch(input: SearchInput): Promise<{
 // --- MCP Server Setup ---
 
 const server = new McpServer({
-  name: "perplexity-oauth-mcp",
+  name: "perplexity-webui-mcp",
   version: "1.0.0",
 });
 
