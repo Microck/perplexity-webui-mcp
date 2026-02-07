@@ -1,7 +1,7 @@
 {
   "name": "perplexity-webui-mcp",
   "version": "1.0.0",
-  "description": "MCP server for querying Perplexity Pro via WebUI session token - personal use only",
+  "description": "MCP wrapper around perplexity-webui-scraper for Perplexity WebUI access",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -32,10 +32,6 @@
     "url": "https://github.com/Microck/perplexity-webui-mcp/issues"
   },
   "homepage": "https://github.com/Microck/perplexity-webui-mcp#readme",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "zod": "^3.24.0"
-  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",

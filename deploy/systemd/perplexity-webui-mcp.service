@@ -1,0 +1,14 @@
+[Unit]
+Description=Perplexity WebUI MCP SSE Server (upstream)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/perplexity-webui-mcp.env
+ExecStart=%h/.local/bin/perplexity-webui-mcp-sse.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -18,7 +18,7 @@
 
 ## quick start
 
-this is a local mcp server (stdio transport). your mcp client spawns it as a process, and you provide the session token via the client's `env` config. so kinda like an oauth flow.
+this package is a local mcp wrapper (stdio transport) that launches the upstream `perplexity-webui-scraper` mcp server via `uvx`.
 
 manual run:
 
@@ -32,7 +32,7 @@ PERPLEXITY_SESSION_TOKEN="your_token_here" npx perplexity-webui-mcp
 
 ### overview
 
-perplexity-webui-mcp lets your ai assistant (claude, opencode, etc) query perplexity pro using your logged-in session. it supports all perplexity pro models including deep research, gpt-5.2, claude 4.5, gemini 3, grok 4.1, and more.
+perplexity-webui-mcp is a local stdio MCP wrapper that launches the upstream `perplexity-webui-scraper` MCP server through `uvx`. this keeps your package on npm while using the upstream battle-tested WebUI implementation (browser impersonation, retry logic, model-specific tools, and token CLI ecosystem).
 
 ---
 
@@ -50,6 +50,14 @@ https://raw.githubusercontent.com/Microck/perplexity-webui-mcp/refs/heads/master
 ```bash
 npm install -g perplexity-webui-mcp
 ```
+
+runtime requirement:
+
+```bash
+uv --version
+```
+
+if `uv` is missing, install it from https://docs.astral.sh/uv/getting-started/installation/
 
 ---
 
@@ -124,48 +132,71 @@ because this server uses `stdio`, you configure it as a local command and pass t
 }
 ```
 
+### remote deployment over tailscale (optional)
+
+if your cloud machine gets blocked by cloudflare but your home machine works, run the upstream mcp server on the home machine and connect to it from opencode as a remote mcp.
+
+1) copy templates from this repo:
+- `deploy/systemd/perplexity-webui-mcp.env.example`
+- `deploy/systemd/perplexity-webui-mcp-sse.sh`
+- `deploy/systemd/perplexity-webui-mcp.service`
+
+2) install and enable service on the home machine (user service):
+
+```bash
+mkdir -p ~/.config ~/.config/systemd/user ~/.local/bin
+cp deploy/systemd/perplexity-webui-mcp.env.example ~/.config/perplexity-webui-mcp.env
+cp deploy/systemd/perplexity-webui-mcp-sse.sh ~/.local/bin/perplexity-webui-mcp-sse.sh
+cp deploy/systemd/perplexity-webui-mcp.service ~/.config/systemd/user/perplexity-webui-mcp.service
+chmod 600 ~/.config/perplexity-webui-mcp.env
+chmod 755 ~/.local/bin/perplexity-webui-mcp-sse.sh
+systemctl --user daemon-reload
+systemctl --user enable --now perplexity-webui-mcp.service
+```
+
+3) point opencode (cloud host) to the tailscale endpoint:
+
+```json
+{
+  "mcp": {
+    "perplexity-webui": {
+      "type": "remote",
+      "url": "http://<tailscale-ip>:8790/sse",
+      "enabled": true,
+      "oauth": false
+    }
+  }
+}
+```
+
+4) verify:
+
+```bash
+opencode mcp list
+```
+
 ---
 
 ### features
 
 | tool | description |
 |------|-------------|
-| **perplexity_search** | query perplexity with full model selection, source filters, and follow-up support |
+| `pplx_ask` | best-model query (auto model selection) |
+| `pplx_deep_research` | deep research mode |
+| `pplx_sonar` | sonar model |
+| `pplx_gpt52` / `pplx_gpt52_thinking` | gpt-5.2 variants |
+| `pplx_claude_sonnet` / `pplx_claude_sonnet_think` | claude sonnet 4.5 variants |
+| `pplx_gemini_flash` / `pplx_gemini_flash_think` / `pplx_gemini_pro_think` | gemini 3 variants |
+| `pplx_grok` / `pplx_grok_thinking` | grok 4.1 variants |
+| `pplx_kimi_thinking` | kimi k2.5 thinking |
 
-### supported models
+all upstream model tools support `source_focus` values: `web`, `academic`, `social`, `finance`, `all`.
 
-| model | identifier |
-|-------|------------|
-| best (default) | `best` |
-| deep research | `deep_research` |
-| sonar | `sonar` |
-| gpt-5.2 | `gpt_52` |
-| gpt-5.2 thinking | `gpt_52_thinking` |
-| claude 4.5 sonnet | `claude_45_sonnet` |
-| claude 4.5 sonnet thinking | `claude_45_sonnet_thinking` |
-| claude 4.5 opus | `claude_45_opus` |
-| claude 4.5 opus thinking | `claude_45_opus_thinking` |
-| gemini 3 flash | `gemini_3_flash` |
-| gemini 3 flash thinking | `gemini_3_flash_thinking` |
-| gemini 3 pro thinking | `gemini_3_pro_thinking` |
-| grok 4.1 | `grok_41` |
-| grok 4.1 thinking | `grok_41_thinking` |
-| kimi k2.5 thinking | `kimi_k25_thinking` |
+### how this differs from v1.0.0
 
-### tool parameters
-
-| parameter | type | default | description |
-|-----------|------|---------|-------------|
-| `query` | string | required | the question to ask perplexity |
-| `model` | enum | `best` | model preset to use |
-| `sourceFocus` | array | `["web"]` | source types: web, academic, social, finance |
-| `searchFocus` | enum | `web` | search mode: web or writing |
-| `timeRange` | enum | `all` | recency filter: all, today, week, month, year |
-| `language` | string | `en-US` | response language (ietf format) |
-| `citationMode` | enum | `clean` | citation format: default, markdown, clean |
-| `saveToLibrary` | boolean | `false` | save query to your perplexity library |
-| `conversationUuid` | string | - | uuid for follow-up questions |
-| `readWriteToken` | string | - | token for follow-ups (from previous response) |
+- old v1.0.0: one custom tool (`perplexity_search`) implemented in local TypeScript HTTP logic.
+- current: delegates to upstream `perplexity-webui-scraper` MCP, exposing the full upstream model-specific toolset.
+- result: significantly better compatibility with Perplexity anti-bot protections.
 
 ---
 
@@ -174,8 +205,9 @@ because this server uses `stdio`, you configure it as a local command and pass t
 | problem | solution |
 |---------|----------|
 | **token invalid / 401** | get a fresh token from browser cookies |
-| **no answer returned** | check if perplexity is blocking requests (rate limits) |
-| **clarifying questions error** | deep research mode needs clarifying answers - use a simpler model |
+| **`uvx` not found** | install uv (`uv --version` should work) |
+| **no answer returned** | check rate limits or whether your account can access the selected model |
+| **clarifying questions error** | deep research mode may request clarifying questions first |
 | **timeout** | deep research can take several minutes - be patient |
 
 ### verify both modes quickly
@@ -196,8 +228,13 @@ and prints pass/fail per mode.
 
 ```
 perplexity-webui-mcp/
+├── deploy/
+│   └── systemd/
+│       ├── perplexity-webui-mcp.env.example
+│       ├── perplexity-webui-mcp-sse.sh
+│       └── perplexity-webui-mcp.service
 ├── src/
-│   └── index.ts      # main server + tool implementation
+│   └── index.ts      # proxy launcher for upstream MCP
 ├── package.json
 ├── tsconfig.json
 ├── .env.example

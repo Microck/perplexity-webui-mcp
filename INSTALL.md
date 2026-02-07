@@ -3,6 +3,7 @@
 ## Prerequisites
 - Node.js 18+
 - npm or yarn
+- uv / uvx (https://docs.astral.sh/uv/getting-started/installation/)
 
 ## Installation Steps
 
@@ -79,11 +80,44 @@ Add this to your MCP client configuration (e.g., `claude_desktop_config.json`, `
 
 Restart Claude Desktop, OpenCode, or whichever MCP client you're using.
 
+### Optional: host remotely over Tailscale + systemd
+
+Use this when your cloud host gets Cloudflare 403 but your home machine works.
+
+1) On the home machine, copy templates from this repo:
+- `deploy/systemd/perplexity-webui-mcp.env.example` -> `~/.config/perplexity-webui-mcp.env`
+- `deploy/systemd/perplexity-webui-mcp-sse.sh` -> `~/.local/bin/perplexity-webui-mcp-sse.sh`
+- `deploy/systemd/perplexity-webui-mcp.service` -> `~/.config/systemd/user/perplexity-webui-mcp.service`
+
+2) Enable service:
+
+```bash
+chmod 600 ~/.config/perplexity-webui-mcp.env
+chmod 755 ~/.local/bin/perplexity-webui-mcp-sse.sh
+systemctl --user daemon-reload
+systemctl --user enable --now perplexity-webui-mcp.service
+```
+
+3) On the cloud machine, configure remote MCP URL:
+
+```json
+{
+  "mcp": {
+    "perplexity-webui": {
+      "type": "remote",
+      "url": "http://<tailscale-ip>:8790/sse",
+      "enabled": true,
+      "oauth": false
+    }
+  }
+}
+```
+
 ### 5. Test it
 
-Ask your AI assistant to search something using Perplexity:
+Ask your AI assistant to call an upstream tool (example):
 
-> "Use perplexity to search for the latest news about AI"
+> "Use `pplx_ask` to search for the latest news about AI"
 
 Or run the built-in mode test directly:
 
@@ -99,7 +133,8 @@ PERPLEXITY_SESSION_TOKEN="YOUR_TOKEN_HERE" npm run self-test
 |---------|----------|
 | Token invalid / 401 | Get a fresh token from browser cookies |
 | Command not found | Run `npm install -g perplexity-webui-mcp` again |
-| No answer returned | Check if Perplexity is blocking requests (rate limits) |
+| `uvx` not found | Install uv and ensure `uvx --version` works |
+| No answer returned | Check rate limits or whether your account can access selected model |
 | Timeout | Deep research can take several minutes - be patient |
 
 ## Acknowledgment
