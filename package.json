@@ -1,6 +1,6 @@
 {
   "name": "perplexity-webui-mcp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "MCP wrapper around perplexity-webui-scraper for Perplexity WebUI access",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
