@@ -1,14 +1,12 @@
-<p align="center">
-  <img src="https://www.perplexity.ai/favicon.ico" alt="perplexity-webui-mcp" width="100">
-</p>
 
-<h1 align="center">perplexity-webui-mcp</h1>
 
-<p align="center">
+<h1 align="">perplexity-webui-mcp</h1>
+
+<p align="">
   mcp server for querying perplexity pro via webui session token.
 </p>
 
-<p align="center">
+<p align="">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="license">
   <img src="https://img.shields.io/badge/language-typescript-blue" alt="language">
   <img src="https://img.shields.io/badge/npm-perplexity--webui--mcp-orange" alt="npm">
@@ -20,7 +18,7 @@
 
 ## quick start
 
-this is a local mcp server (stdio transport). your mcp client spawns it as a process, and you provide the session token via the client's `env` config.
+this is a local mcp server (stdio transport). your mcp client spawns it as a process, and you provide the session token via the client's `env` config. so kinda like an oauth flow.
 
 manual run:
 
