@@ -71,10 +71,12 @@ npm run build
 **fastest method (automatic via CLI):**
 
 ```bash
-uvx --from "perplexity-webui-scraper@latest" get-perplexity-session-token
+uvx --with rich --from "perplexity-webui-scraper@latest" get-perplexity-session-token
 ```
 
 this interactive CLI asks for your email, handles OTP/magic-link verification, and prints the session token.
+
+you can run that command from any directory.
 
 **manual method (browser):**
 
