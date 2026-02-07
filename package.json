@@ -1,0 +1,46 @@
+{
+  "name": "perplexity-oauth-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for querying Perplexity Pro via WebUI session token - personal use only",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "perplexity-oauth-mcp": "dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "perplexity",
+    "ai",
+    "model-context-protocol",
+    "mcp-server"
+  ],
+  "author": "Microck",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Microck/perplexity-oauth-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Microck/perplexity-oauth-mcp/issues"
+  },
+  "homepage": "https://github.com/Microck/perplexity-oauth-mcp#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
