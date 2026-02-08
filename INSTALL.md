@@ -52,6 +52,7 @@ Add this to your MCP client configuration (e.g., `claude_desktop_config.json`, `
   "mcpServers": {
     "perplexity": {
       "command": "perplexity-webui-mcp",
+      "timeout": 600000,
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE"
       }
@@ -68,6 +69,7 @@ Add this to your MCP client configuration (e.g., `claude_desktop_config.json`, `
     "perplexity": {
       "command": "node",
       "args": ["/path/to/perplexity-webui-mcp/dist/index.js"],
+      "timeout": 600000,
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE"
       }
@@ -107,6 +109,7 @@ systemctl --user enable --now perplexity-webui-mcp.service
       "type": "remote",
       "url": "http://<tailscale-ip>:8790/sse",
       "enabled": true,
+      "timeout": 600000,
       "oauth": false
     }
   }
