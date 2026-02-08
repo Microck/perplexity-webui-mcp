@@ -101,6 +101,8 @@ you can run that command from any directory.
 
 because this server uses `stdio`, you configure it as a local command and pass the token via `env`.
 
+note: deep research can take longer than 60 seconds. if your client supports it, set a higher `timeout` (example: 10 minutes).
+
 **mcp client config (claude desktop, opencode, etc)**
 
 ```json
@@ -108,6 +110,7 @@ because this server uses `stdio`, you configure it as a local command and pass t
   "mcpServers": {
     "perplexity": {
       "command": "perplexity-webui-mcp",
+      "timeout": 600000,
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "your_session_token_here"
       }
@@ -124,6 +127,7 @@ because this server uses `stdio`, you configure it as a local command and pass t
     "perplexity": {
       "command": "node",
       "args": ["/path/to/perplexity-webui-mcp/dist/index.js"],
+      "timeout": 600000,
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "your_session_token_here"
       }
@@ -163,6 +167,7 @@ systemctl --user enable --now perplexity-webui-mcp.service
       "type": "remote",
       "url": "http://<tailscale-ip>:8790/sse",
       "enabled": true,
+      "timeout": 600000,
       "oauth": false
     }
   }
