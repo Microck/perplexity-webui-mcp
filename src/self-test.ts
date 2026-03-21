@@ -14,15 +14,24 @@ type TestResult = {
   deep_research: ModeResult;
 };
 
+const UPSTREAM_FROM =
+  process.env.PERPLEXITY_UPSTREAM_FROM ??
+  "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod";
+
 function fail(message: string): never {
   console.error(`perplexity-webui-mcp self-test: ${message}`);
   process.exit(1);
 }
 
-function parseResult(stdout: string): TestResult {
+function parseResult(stdout: string, stderr: string): TestResult {
   const output = stdout.trim();
   if (!output) {
-    fail("no output from Python self-test runner");
+    const detail = stderr.trim();
+    fail(
+      detail
+        ? `no output from Python self-test runner\n${detail}`
+        : "no output from Python self-test runner",
+    );
   }
 
   const lastLine = output.split("\n").pop();
@@ -47,9 +56,14 @@ function main(): void {
 import json
 import os
 
-from perplexity_webui_scraper import ConversationConfig, Models, Perplexity
-from perplexity_webui_scraper.enums import CitationMode, SearchFocus, SourceFocus
-from perplexity_webui_scraper.exceptions import ResearchClarifyingQuestionsError
+from perplexity_webui_scraper import (
+  CitationMode,
+  ConversationConfig,
+  Perplexity,
+  ResearchClarifyingQuestionsError,
+  SearchFocus,
+  SourceFocus,
+)
 
 token = os.environ.get("PERPLEXITY_SESSION_TOKEN", "").strip()
 result = {
@@ -68,7 +82,7 @@ client = Perplexity(token)
 try:
   regular = client.create_conversation(
     ConversationConfig(
-      model=Models.BEST,
+      model="best",
       citation_mode=CitationMode.CLEAN,
       search_focus=SearchFocus.WEB,
       source_focus=[SourceFocus.WEB],
@@ -90,7 +104,7 @@ except Exception as error:
 try:
   deep = client.create_conversation(
     ConversationConfig(
-      model=Models.DEEP_RESEARCH,
+      model="deep-research",
       citation_mode=CitationMode.CLEAN,
       search_focus=SearchFocus.WEB,
       source_focus=[SourceFocus.WEB],
@@ -120,11 +134,10 @@ print(json.dumps(result))
 `;
 
   const run = spawnSync(
-    "uv",
+    "uvx",
     [
-      "run",
-      "--with",
-      "perplexity-webui-scraper",
+      "--from",
+      UPSTREAM_FROM,
       "python",
       "-c",
       pythonScript,
@@ -142,14 +155,14 @@ print(json.dumps(result))
   if (run.error) {
     if ((run.error as NodeJS.ErrnoException).code === "ENOENT") {
       fail(
-        "`uv` was not found. Install uv first: https://docs.astral.sh/uv/getting-started/installation/",
+        "`uvx` was not found. Install uv first: https://docs.astral.sh/uv/getting-started/installation/",
       );
     }
 
-    fail(`unable to execute uv runner: ${String(run.error)}`);
+    fail(`unable to execute uvx runner: ${String(run.error)}`);
   }
 
-  const parsed = parseResult(run.stdout ?? "");
+  const parsed = parseResult(run.stdout ?? "", run.stderr ?? "");
 
   const regular = parsed.regular;
   const deep = parsed.deep_research;
@@ -166,7 +179,7 @@ print(json.dumps(result))
     console.error(`FAIL deep_research: ${deep.error ?? "unknown error"}`);
   }
 
-  if (run.status !== 0 && run.status !== null) {
+  if (run.stderr?.trim()) {
     console.error((run.stderr ?? "").trim());
   }
 

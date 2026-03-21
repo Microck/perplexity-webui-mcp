@@ -20,6 +20,20 @@
 
 this package is a local mcp wrapper (stdio transport) that launches the upstream `perplexity-webui-scraper` mcp server via `uvx`.
 
+by default it pins the upstream runner to:
+
+```text
+perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod
+```
+
+override that only if you need to test a different upstream build:
+
+```bash
+PERPLEXITY_UPSTREAM_FROM="perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@<ref>" \
+PERPLEXITY_SESSION_TOKEN="your_token_here" \
+npx perplexity-webui-mcp
+```
+
 manual run:
 
 ```bash
@@ -79,7 +93,7 @@ npm run build
 **fastest method (automatic via CLI):**
 
 ```bash
-uvx --with rich --from "perplexity-webui-scraper@latest" get-perplexity-session-token
+uvx --with rich --from "perplexity-webui-scraper@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod" get-perplexity-session-token
 ```
 
 this interactive CLI asks for your email, handles OTP/magic-link verification, and prints the session token.
@@ -189,11 +203,13 @@ opencode mcp list
 | `pplx_ask` | best-model query (auto model selection) |
 | `pplx_deep_research` | deep research mode |
 | `pplx_sonar` | sonar model |
-| `pplx_gpt52` / `pplx_gpt52_thinking` | gpt-5.2 variants |
-| `pplx_claude_sonnet` / `pplx_claude_sonnet_think` | claude sonnet 4.5 variants |
-| `pplx_gemini_flash` / `pplx_gemini_flash_think` / `pplx_gemini_pro_think` | gemini 3 variants |
-| `pplx_grok` / `pplx_grok_thinking` | grok 4.1 variants |
-| `pplx_kimi_thinking` | kimi k2.5 thinking |
+| `pplx_gpt54` / `pplx_gpt54_thinking` | gpt-5.4 variants |
+| `pplx_claude_o46` / `pplx_claude_o46_think` | claude opus 4.6 variants |
+| `pplx_claude_s46` / `pplx_claude_s46_think` | claude sonnet 4.6 variants |
+| `pplx_gemini31_pro` / `pplx_gemini31_pro_think` | gemini 3.1 pro variants |
+| `pplx_gemini_flash` / `pplx_gemini_flash_think` | gemini flash variants |
+| `pplx_grok41` / `pplx_grok41_think` | grok 4.1 variants |
+| `pplx_nemotron3_super_think` | nemotron 3 super thinking |
 
 all upstream model tools support `source_focus` values: `web`, `academic`, `social`, `finance`, `all`.
 
@@ -223,7 +239,7 @@ PERPLEXITY_SESSION_TOKEN="your_token_here" npm run self-test
 
 this checks both:
 - regular search (`best`)
-- deep research (`deep_research`)
+- deep research (`deep-research`)
 
 and prints pass/fail per mode.
 

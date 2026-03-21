@@ -5,6 +5,12 @@
 - npm or yarn
 - uv / uvx (https://docs.astral.sh/uv/getting-started/installation/)
 
+This package defaults to the pinned upstream MCP runner:
+
+```text
+perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod
+```
+
 ## Installation Steps
 
 ### 1. Install the package globally
@@ -27,7 +33,7 @@ npm run build
 **Fastest (automatic CLI):**
 
 ```bash
-uvx --with rich --from "perplexity-webui-scraper@latest" get-perplexity-session-token
+uvx --with rich --from "perplexity-webui-scraper@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod" get-perplexity-session-token
 ```
 
 This interactive tool asks for your email, handles verification, and prints your token.

@@ -3,7 +3,8 @@
 import { spawn } from "node:child_process";
 
 const UPSTREAM_FROM =
-  process.env.PERPLEXITY_UPSTREAM_FROM ?? "perplexity-webui-scraper[mcp]@latest";
+  process.env.PERPLEXITY_UPSTREAM_FROM ??
+  "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod";
 const UPSTREAM_COMMAND =
   process.env.PERPLEXITY_UPSTREAM_COMMAND ?? "perplexity-webui-scraper-mcp";
 
