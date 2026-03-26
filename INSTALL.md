@@ -51,6 +51,11 @@ You can run this command from any directory.
 
 Add this to your MCP client configuration (e.g., `claude_desktop_config.json`, `mcp.json`, or equivalent):
 
+Proxy note:
+- if you already use standard proxy env vars such as `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, or `NO_PROXY`, the wrapper forwards them to the upstream process
+- if you want one wrapper-specific knob, set `PERPLEXITY_PROXY_URL`; it is expanded into the standard proxy env vars before the upstream MCP server starts
+- use `PERPLEXITY_NO_PROXY` for bypass hosts
+
 **If installed via npm:**
 
 ```json
@@ -60,7 +65,9 @@ Add this to your MCP client configuration (e.g., `claude_desktop_config.json`, `
       "command": "perplexity-webui-mcp",
       "timeout": 600000,
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE"
+        "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE",
+        "PERPLEXITY_PROXY_URL": "socks5://127.0.0.1:1080",
+        "PERPLEXITY_NO_PROXY": "localhost,127.0.0.1"
       }
     }
   }
@@ -77,7 +84,9 @@ Add this to your MCP client configuration (e.g., `claude_desktop_config.json`, `
       "args": ["/path/to/perplexity-webui-mcp/dist/index.js"],
       "timeout": 600000,
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE"
+        "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE",
+        "PERPLEXITY_PROXY_URL": "socks5://127.0.0.1:1080",
+        "PERPLEXITY_NO_PROXY": "localhost,127.0.0.1"
       }
     }
   }
@@ -156,3 +165,5 @@ This project was built with help from:
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `PERPLEXITY_SESSION_TOKEN` | Yes | Your `__Secure-next-auth.session-token` cookie value |
+| `PERPLEXITY_PROXY_URL` | No | Single proxy URL expanded into `HTTP_PROXY`, `HTTPS_PROXY`, and `ALL_PROXY` for the upstream process |
+| `PERPLEXITY_NO_PROXY` | No | Optional bypass list expanded into `NO_PROXY` |

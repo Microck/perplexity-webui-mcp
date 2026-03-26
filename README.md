@@ -40,6 +40,14 @@ manual run:
 PERPLEXITY_SESSION_TOKEN="your_token_here" npx perplexity-webui-mcp
 ```
 
+manual run through a proxy:
+
+```bash
+PERPLEXITY_SESSION_TOKEN="your_token_here" \
+PERPLEXITY_PROXY_URL="socks5://127.0.0.1:1080" \
+npx perplexity-webui-mcp
+```
+
 > **important:** this uses perplexity's internal webui api with a session cookie. for personal/local tinkering only - not affiliated with perplexity ai.
 
 ---
@@ -115,6 +123,11 @@ you can run that command from any directory.
 
 because this server uses `stdio`, you configure it as a local command and pass the token via `env`.
 
+proxy support:
+- standard proxy env vars already pass through: `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` and their lowercase variants
+- for a simpler single-value setup, set `PERPLEXITY_PROXY_URL`; the wrapper expands it into the standard proxy env vars before launching the upstream MCP server
+- optional bypass list: `PERPLEXITY_NO_PROXY`
+
 note: deep research can take longer than 60 seconds. if your client supports it, set a higher `timeout` (example: 10 minutes).
 
 **mcp client config (claude desktop, opencode, etc)**
@@ -126,7 +139,9 @@ note: deep research can take longer than 60 seconds. if your client supports it,
       "command": "perplexity-webui-mcp",
       "timeout": 600000,
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "your_session_token_here"
+        "PERPLEXITY_SESSION_TOKEN": "your_session_token_here",
+        "PERPLEXITY_PROXY_URL": "socks5://127.0.0.1:1080",
+        "PERPLEXITY_NO_PROXY": "localhost,127.0.0.1"
       }
     }
   }
@@ -143,7 +158,9 @@ note: deep research can take longer than 60 seconds. if your client supports it,
       "args": ["/path/to/perplexity-webui-mcp/dist/index.js"],
       "timeout": 600000,
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "your_session_token_here"
+        "PERPLEXITY_SESSION_TOKEN": "your_session_token_here",
+        "PERPLEXITY_PROXY_URL": "socks5://127.0.0.1:1080",
+        "PERPLEXITY_NO_PROXY": "localhost,127.0.0.1"
       }
     }
   }

@@ -1,9 +1,17 @@
 {
   "name": "perplexity-webui-mcp",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "MCP wrapper around perplexity-webui-scraper for Perplexity WebUI access",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "deploy",
+    ".env.example",
+    "README.md",
+    "INSTALL.md",
+    "LICENSE"
+  ],
   "bin": {
     "perplexity-webui-mcp": "dist/index.js"
   },
@@ -12,6 +20,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
+    "test": "tsx --test src/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "self-test": "tsx src/self-test.ts"
   },

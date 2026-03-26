@@ -1,16 +1,116 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const UPSTREAM_FROM =
   process.env.PERPLEXITY_UPSTREAM_FROM ??
   "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod";
 const UPSTREAM_COMMAND =
   process.env.PERPLEXITY_UPSTREAM_COMMAND ?? "perplexity-webui-scraper-mcp";
+const HTTP_PROXY_KEYS = ["HTTP_PROXY", "http_proxy"] as const;
+const HTTPS_PROXY_KEYS = ["HTTPS_PROXY", "https_proxy"] as const;
+const ALL_PROXY_KEYS = ["ALL_PROXY", "all_proxy"] as const;
+const NO_PROXY_KEYS = ["NO_PROXY", "no_proxy"] as const;
 
 function fail(message: string): never {
   console.error(`perplexity-webui-mcp: ${message}`);
   process.exit(1);
+}
+
+function getFirstNonEmptyValue({
+  env,
+  keys,
+}: {
+  env: NodeJS.ProcessEnv;
+  keys: readonly string[];
+}): string | undefined {
+  return keys
+    .map((key) => {
+      return env[key]?.trim();
+    })
+    .find((value) => {
+      return Boolean(value);
+    });
+}
+
+function setMirroredValue({
+  env,
+  keys,
+  value,
+}: {
+  env: NodeJS.ProcessEnv;
+  keys: readonly string[];
+  value: string;
+}): void {
+  keys.forEach((key) => {
+    env[key] = value;
+  });
+}
+
+export function buildChildEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const childEnv: NodeJS.ProcessEnv = {
+    ...env,
+  };
+
+  const token = env.PERPLEXITY_SESSION_TOKEN?.trim();
+  if (token) {
+    childEnv.PERPLEXITY_SESSION_TOKEN = token;
+  }
+
+  const proxyUrl = env.PERPLEXITY_PROXY_URL?.trim();
+  const noProxy = env.PERPLEXITY_NO_PROXY?.trim();
+
+  const httpProxy = getFirstNonEmptyValue({
+    env,
+    keys: HTTP_PROXY_KEYS,
+  }) ?? proxyUrl;
+  const httpsProxy = getFirstNonEmptyValue({
+    env,
+    keys: HTTPS_PROXY_KEYS,
+  }) ?? proxyUrl;
+  const allProxy = getFirstNonEmptyValue({
+    env,
+    keys: ALL_PROXY_KEYS,
+  }) ?? proxyUrl;
+  const noProxyValue = getFirstNonEmptyValue({
+    env,
+    keys: NO_PROXY_KEYS,
+  }) ?? noProxy;
+
+  if (httpProxy) {
+    setMirroredValue({
+      env: childEnv,
+      keys: HTTP_PROXY_KEYS,
+      value: httpProxy,
+    });
+  }
+
+  if (httpsProxy) {
+    setMirroredValue({
+      env: childEnv,
+      keys: HTTPS_PROXY_KEYS,
+      value: httpsProxy,
+    });
+  }
+
+  if (allProxy) {
+    setMirroredValue({
+      env: childEnv,
+      keys: ALL_PROXY_KEYS,
+      value: allProxy,
+    });
+  }
+
+  if (noProxyValue) {
+    setMirroredValue({
+      env: childEnv,
+      keys: NO_PROXY_KEYS,
+      value: noProxyValue,
+    });
+  }
+
+  return childEnv;
 }
 
 function main(): void {
@@ -23,10 +123,7 @@ function main(): void {
 
   const child = spawn("uvx", ["--from", UPSTREAM_FROM, UPSTREAM_COMMAND], {
     stdio: "inherit",
-    env: {
-      ...process.env,
-      PERPLEXITY_SESSION_TOKEN: token,
-    },
+    env: buildChildEnv(process.env),
   });
 
   child.on("error", (error) => {
@@ -60,4 +157,8 @@ function main(): void {
   forwardSignal("SIGTERM");
 }
 
-main();
+const currentEntryPoint = process.argv[1];
+
+if (currentEntryPoint && import.meta.url === pathToFileURL(currentEntryPoint).href) {
+  main();
+}
