@@ -1,18 +1,20 @@
+<h1 align="center">perplexity-webui-mcp</h1>
 
-
-<h1 align="">perplexity-webui-mcp</h1>
-
-<p align="">
+<p align="center">
   mcp server for querying perplexity pro via webui session token.
 </p>
 
-<p align="">
+<p align="center">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="license">
   <img src="https://img.shields.io/badge/language-typescript-blue" alt="language">
   <img src="https://img.shields.io/badge/npm-perplexity--webui--mcp-orange" alt="npm">
   <img src="https://img.shields.io/badge/mcp-sdk-orange" alt="mcp">
   <a href="https://github.com/Microck/opencode-studio"><img src="https://img.shields.io/badge/opencode-studio-brown?logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAABiElEQVR4nF2Sv0tWcRTGPyeVIpCWwmyJGqQagsqCsL2hhobsD3BvdWhoj%2F6CiIKaoqXBdMjKRWwQgqZ%2BokSvkIhg9BOT9xPn9Vx79cD3cu6953zP8zznCQB1V0S01d3AKeAKcBVYA94DjyJioru2k9SHE%2Bqc%2Bkd9rL7yf7TUm%2BpQ05yPUM%2Bo626Pp%2BqE2q7GGfWrOpjNnWnAOPAGeAK8Bb4U5D3AJ%2BAQsAAMAHfVvl7gIrAf2Kjiz8BZYB3YC%2FwFpoGDwHfgEnA0oU7tgHiheEShyXxY%2FVn%2Fn6ljye8DcBiYAloRcV3tAdrV1xMRG%2Bo94DywCAwmx33AJHASWK7iiAjzNFOBl7WapPYtYdyo8RlLqVpOVPvq9KoH1NUuOneycaRefqnP1ftdUyiOt5KS%2BqLWdDpVzTXMl5It4Jr6u%2BQ%2FnhyBc8C7jpowGxGvmxuPqT9qyYuFIKdP71B8WT3SOKexXLrntvqxq3BefaiuFMQ0wqZftxl3M78MjBasfiDN%2FSAi0kFbtf8ACtKBWZBDoJEAAAAASUVORK5CYII%3D" alt="Add with OpenCode Studio" /></a>
 </p>
+
+---
+
+**contents:** [quick start](#quick-start) · [installation](#quick-installation) · [session token](#getting-your-session-token) · [configuration](#configuration) · [remote deployment](#remote-deployment-over-tailscale-optional) · [features](#features) · [troubleshooting](#troubleshooting) · [project structure](#project-structure)
 
 ---
 
