@@ -4,6 +4,12 @@
   "description": "MCP wrapper around perplexity-webui-scraper for Perplexity WebUI access",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "dist",
     "deploy",
