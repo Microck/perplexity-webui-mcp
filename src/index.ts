@@ -2,12 +2,7 @@
 
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
-
-const UPSTREAM_FROM =
-  process.env.PERPLEXITY_UPSTREAM_FROM ??
-  "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod";
-const UPSTREAM_COMMAND =
-  process.env.PERPLEXITY_UPSTREAM_COMMAND ?? "perplexity-webui-scraper-mcp";
+import { UPSTREAM_FROM, UPSTREAM_COMMAND } from "./constants.js";
 const HTTP_PROXY_KEYS = ["HTTP_PROXY", "http_proxy"] as const;
 const HTTPS_PROXY_KEYS = ["HTTPS_PROXY", "https_proxy"] as const;
 const ALL_PROXY_KEYS = ["ALL_PROXY", "all_proxy"] as const;
@@ -157,8 +152,24 @@ function main(): void {
   forwardSignal("SIGTERM");
 }
 
-const currentEntryPoint = process.argv[1];
+// Robust entry guard: only run main() when executed directly as a script,
+// not when imported as a module. Checks both process.argv[1] match and
+// whether we're being run via the npm bin entry point.
+const isDirectRun = (() => {
+  try {
+    const entry = process.argv[1];
+    if (!entry) return false;
+    const entryUrl = pathToFileURL(entry).href;
+    if (import.meta.url === entryUrl) return true;
+    // Also match when run via npx or globally linked bin (resolved paths)
+    const entryPath = new URL(entryUrl).pathname;
+    const modulePath = new URL(import.meta.url).pathname;
+    return entryPath.endsWith("dist/index.js") && modulePath.endsWith("dist/index.js") && process.argv[1]?.includes("perplexity-webui-mcp");
+  } catch {
+    return false;
+  }
+})();
 
-if (currentEntryPoint && import.meta.url === pathToFileURL(currentEntryPoint).href) {
+if (isDirectRun) {
   main();
 }

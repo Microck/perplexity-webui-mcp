@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { UPSTREAM_FROM } from "./constants.js";
 
 type ModeResult = {
   ok: boolean;
@@ -13,10 +14,6 @@ type TestResult = {
   regular: ModeResult;
   deep_research: ModeResult;
 };
-
-const UPSTREAM_FROM =
-  process.env.PERPLEXITY_UPSTREAM_FROM ??
-  "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod";
 
 function fail(message: string): never {
   console.error(`perplexity-webui-mcp self-test: ${message}`);
