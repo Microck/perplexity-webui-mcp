@@ -1,76 +1,77 @@
+<h1 align="center">perplexity-webui-mcp</h1>
 
-
-<h1 align="">perplexity-webui-mcp</h1>
-
-<p align="">
-  mcp server for querying perplexity pro via webui session token.
+<p align="center">
+  MCP server for querying Perplexity Pro via WebUI session token.
 </p>
 
-<p align="">
+<p align="center">
+  <img src="https://img.shields.io/npm/v/perplexity-webui-mcp?label=npm&color=orange" alt="npm">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="license">
   <img src="https://img.shields.io/badge/language-typescript-blue" alt="language">
-  <img src="https://img.shields.io/badge/npm-perplexity--webui--mcp-orange" alt="npm">
-  <img src="https://img.shields.io/badge/mcp-sdk-orange" alt="mcp">
+  <img src="https://img.shields.io/badge/node-%3E%3D18-green" alt="node">
   <a href="https://github.com/Microck/opencode-studio"><img src="https://img.shields.io/badge/opencode-studio-brown?logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAABiElEQVR4nF2Sv0tWcRTGPyeVIpCWwmyJGqQagsqCsL2hhobsD3BvdWhoj%2F6CiIKaoqXBdMjKRWwQgqZ%2BokSvkIhg9BOT9xPn9Vx79cD3cu6953zP8zznCQB1V0S01d3AKeAKcBVYA94DjyJioru2k9SHE%2Bqc%2Bkd9rL7yf7TUm%2BpQ05yPUM%2Bo626Pp%2BqE2q7GGfWrOpjNnWnAOPAGeAK8Bb4U5D3AJ%2BAQsAAMAHfVvl7gIrAf2Kjiz8BZYB3YC%2FwFpoGDwHfgEnA0oU7tgHiheEShyXxY%2FVn%2Fn6ljye8DcBiYAloRcV3tAdrV1xMRG%2Bo94DywCAwmx33AJHASWK7iiAjzNFOBl7WapPYtYdyo8RlLqVpOVPvq9KoH1NUuOneycaRefqnP1ftdUyiOt5KS%2BqLWdDpVzTXMl5It4Jr6u%2BQ%2FnhyBc8C7jpowGxGvmxuPqT9qyYuFIKdP71B8WT3SOKexXLrntvqxq3BefaiuFMQ0wqZftxl3M78MjBasfiDN%2FSAi0kFbtf8ACtKBWZBDoJEAAAAASUVORK5CYII%3D" alt="Add with OpenCode Studio" /></a>
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#getting-your-session-token">Session Token</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="#features">Tools</a> ·
+  <a href="#troubleshooting">Troubleshooting</a> ·
+  <a href="INSTALL.md">Full Install Guide</a>
 </p>
 
 ---
 
-## quick start
+## Quick Start
 
-this package is a local mcp wrapper (stdio transport) that launches the upstream `perplexity-webui-scraper` mcp server via `uvx`.
+This package is a local MCP wrapper (stdio transport) that launches the upstream `perplexity-webui-scraper` MCP server via `uvx`.
 
-by default it pins the upstream runner to:
+By default it pins the upstream runner to:
 
 ```text
 perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod
 ```
 
-override that only if you need to test a different upstream build:
+Override that only if you need to test a different upstream build:
 
 ```bash
 PERPLEXITY_UPSTREAM_FROM="perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@<ref>" \
-PERPLEXITY_SESSION_TOKEN="your_token_here" \
+PERPLEXITY_SESSION_TOKEN="***" \
 npx perplexity-webui-mcp
 ```
 
-manual run:
+Manual run:
 
 ```bash
-PERPLEXITY_SESSION_TOKEN="your_token_here" npx perplexity-webui-mcp
+PERPLEXITY_SESSION_TOKEN="***" npx perplexity-webui-mcp
 ```
 
-manual run through a proxy:
+Manual run through a proxy:
 
 ```bash
-PERPLEXITY_SESSION_TOKEN="your_token_here" \
+PERPLEXITY_SESSION_TOKEN="***" \
 PERPLEXITY_PROXY_URL="socks5://127.0.0.1:1080" \
 npx perplexity-webui-mcp
 ```
 
-manual run with flaresolverr:
+Manual run with FlareSolverr:
 
 ```bash
 docker run -d --name flaresolverr -p 8191:8191 ghcr.io/flaresolverr/flaresolverr:latest
 
-PERPLEXITY_SESSION_TOKEN="your_token_here" \
+PERPLEXITY_SESSION_TOKEN="***" \
 PERPLEXITY_FLARESOLVERR_URL="http://127.0.0.1:8191" \
 npx perplexity-webui-mcp
 ```
 
-> **important:** this uses perplexity's internal webui api with a session cookie. for personal/local tinkering only - not affiliated with perplexity ai.
+> **Important:** This uses Perplexity's internal WebUI API with a session cookie. For personal/local tinkering only — not affiliated with Perplexity AI.
 
 ---
 
-### overview
+### Quick Installation
 
-perplexity-webui-mcp is a local stdio mcp wrapper that launches the upstream `perplexity-webui-scraper` mcp server through `uvx`. this keeps the package on npm while using the upstream webui implementation for browser impersonation, retry logic, model-specific tools, and token tooling.
-
----
-
-### quick installation
-
-paste this into your llm agent session:
+Paste this into your LLM agent session:
 
 ```
 Install and configure perplexity-webui-mcp by following the instructions here:
@@ -83,19 +84,17 @@ https://raw.githubusercontent.com/Microck/perplexity-webui-mcp/refs/heads/master
 npm install -g perplexity-webui-mcp
 ```
 
-runtime requirement:
+Runtime requirement:
 
 ```bash
 uv --version
 ```
 
-if `uv` is missing, install it from https://docs.astral.sh/uv/getting-started/installation/
+If `uv` is missing, install it from https://docs.astral.sh/uv/getting-started/installation/
 
----
+### Manual Installation
 
-### manual installation
-
-**from source**
+**From source**
 
 ```bash
 git clone https://github.com/Microck/perplexity-webui-mcp.git
@@ -106,45 +105,46 @@ npm run build
 
 ---
 
-### getting your session token
+## Getting Your Session Token
 
-**fastest method (automatic via CLI):**
+**Fastest method (automatic via CLI):**
 
 ```bash
 uvx --with rich --from "perplexity-webui-scraper@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod" get-perplexity-session-token
 ```
 
-this interactive CLI asks for your email, handles OTP/magic-link verification, and prints the session token.
+This interactive CLI asks for your email, handles OTP/magic-link verification, and prints the session token. You can run that command from any directory.
 
-you can run that command from any directory.
+**Manual method (browser):**
 
-**manual method (browser):**
+1. Open [perplexity.ai](https://www.perplexity.ai) in your browser and log in
+2. Open DevTools (F12 or Cmd+Opt+I)
+3. Go to **Application** > **Cookies** > `https://www.perplexity.ai`
+4. Copy the value of `__Secure-next-auth.session-token`
 
-1. open [perplexity.ai](https://www.perplexity.ai) in your browser and log in
-2. open devtools (f12 or cmd+opt+i)
-3. go to **application** > **cookies** > `https://www.perplexity.ai`
-4. copy the value of `__Secure-next-auth.session-token`
-
-> powered by token extraction flow from: https://github.com/henrique-coder/perplexity-webui-scraper
+> Powered by token extraction flow from: https://github.com/henrique-coder/perplexity-webui-scraper
 
 ---
 
-### configuration
+## Configuration
 
-because this server uses `stdio`, you configure it as a local command and pass the token via `env`.
+Because this server uses `stdio`, you configure it as a local command and pass the token via `env`.
 
-proxy support:
-- standard proxy env vars already pass through: `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` and their lowercase variants
-- for a simpler single-value setup, set `PERPLEXITY_PROXY_URL`; the wrapper expands it into the standard proxy env vars before launching the upstream MCP server
-- optional bypass list: `PERPLEXITY_NO_PROXY`
-- if perplexity keeps returning cloudflare challenge pages, set `PERPLEXITY_FLARESOLVERR_URL` to a running flaresolverr instance. the wrapper solves `https://www.perplexity.ai/search/new`, injects the returned cookies into the upstream `curl_cffi` session, and stops forwarding the standard proxy env vars in that mode
-- optional flaresolverr overrides:
-  - `PERPLEXITY_FLARESOLVERR_SOLVE_URL` - alternate url to solve first. default: `https://www.perplexity.ai/search/new`
-  - `PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT` - flaresolverr solve timeout in milliseconds. default: `60000`
+### Proxy Support
 
-note: deep research can take longer than 60 seconds. if your client supports it, set a higher `timeout` (example: 10 minutes).
+- Standard proxy env vars already pass through: `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` and their lowercase variants
+- For a simpler single-value setup, set `PERPLEXITY_PROXY_URL`; the wrapper expands it into the standard proxy env vars before launching the upstream MCP server
+- Optional bypass list: `PERPLEXITY_NO_PROXY`
+- If Perplexity keeps returning Cloudflare challenge pages, set `PERPLEXITY_FLARESOLVERR_URL` to a running FlareSolverr instance. The wrapper solves `https://www.perplexity.ai/search/new`, injects the returned cookies into the upstream `curl_cffi` session, and stops forwarding the standard proxy env vars in that mode
+- Optional FlareSolverr overrides:
+  - `PERPLEXITY_FLARESOLVERR_SOLVE_URL` — alternate URL to solve first. Default: `https://www.perplexity.ai/search/new`
+  - `PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT` — FlareSolverr solve timeout in milliseconds. Default: `60000`
 
-**mcp client config (claude desktop, opencode, etc)**
+> **Note:** Deep research can take longer than 60 seconds. If your client supports it, set a higher `timeout` (example: 10 minutes).
+
+### MCP Client Config (Claude Desktop, OpenCode, etc)
+
+**npm installation:**
 
 ```json
 {
@@ -161,7 +161,7 @@ note: deep research can take longer than 60 seconds. if your client supports it,
 }
 ```
 
-**from source**
+**From source:**
 
 ```json
 {
@@ -179,38 +179,39 @@ note: deep research can take longer than 60 seconds. if your client supports it,
 }
 ```
 
-### using flaresolverr when cloudflare blocks your host
+### Using FlareSolverr When Cloudflare Blocks Your Host
 
-start flaresolverr:
+Start FlareSolverr:
 
 ```bash
 docker run -d --name flaresolverr -p 8191:8191 ghcr.io/flaresolverr/flaresolverr:latest
 curl http://127.0.0.1:8191/
 ```
 
-then point the wrapper at it:
+Then point the wrapper at it:
 
 ```bash
-PERPLEXITY_SESSION_TOKEN="your_token_here" \
+PERPLEXITY_SESSION_TOKEN="***" \
 PERPLEXITY_FLARESOLVERR_URL="http://127.0.0.1:8191" \
 npx perplexity-webui-mcp
 ```
 
-flaresolverr mode:
-- the wrapper solves the cloudflare wall in flaresolverr first, then injects the returned cookies into the upstream session
-- the wrapper does not forward `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, or `NO_PROXY` to the upstream process in this mode because the solved cookies need to stay tied to the flaresolverr browser route
-- if flaresolverr itself needs a proxy, configure that on the flaresolverr side instead of on `perplexity-webui-mcp`
+FlareSolverr mode:
 
-### remote deployment over tailscale (optional)
+- The wrapper solves the Cloudflare wall in FlareSolverr first, then injects the returned cookies into the upstream session
+- The wrapper does **not** forward `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, or `NO_PROXY` to the upstream process in this mode because the solved cookies need to stay tied to the FlareSolverr browser route
+- If FlareSolverr itself needs a proxy, configure that on the FlareSolverr side instead of on `perplexity-webui-mcp`
 
-if your cloud machine gets blocked by cloudflare but your home machine works, run the upstream mcp server on the home machine and connect to it from opencode as a remote mcp.
+### Remote Deployment Over Tailscale (Optional)
 
-1) copy templates from this repo:
+If your cloud machine gets blocked by Cloudflare but your home machine works, run the upstream MCP server on the home machine and connect to it from OpenCode as a remote MCP.
+
+1) Copy templates from this repo:
 - `deploy/systemd/perplexity-webui-mcp.env.example`
 - `deploy/systemd/perplexity-webui-mcp-sse.sh`
 - `deploy/systemd/perplexity-webui-mcp.service`
 
-2) install and enable service on the home machine (user service):
+2) Install and enable service on the home machine (user service):
 
 ```bash
 mkdir -p ~/.config ~/.config/systemd/user ~/.local/bin
@@ -223,7 +224,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now perplexity-webui-mcp.service
 ```
 
-3) point opencode (cloud host) to the tailscale endpoint:
+3) Point OpenCode (cloud host) to the Tailscale endpoint:
 
 ```json
 {
@@ -239,7 +240,7 @@ systemctl --user enable --now perplexity-webui-mcp.service
 }
 ```
 
-4) verify:
+4) Verify:
 
 ```bash
 opencode mcp list
@@ -247,57 +248,73 @@ opencode mcp list
 
 ---
 
-### features
+## Environment Variables
 
-| tool | description |
-|------|-------------|
-| `pplx_ask` | best-model query (auto model selection) |
-| `pplx_deep_research` | deep research mode |
-| `pplx_sonar` | sonar model |
-| `pplx_gpt54` / `pplx_gpt54_thinking` | gpt-5.4 variants |
-| `pplx_claude_o46` / `pplx_claude_o46_think` | claude opus 4.6 variants |
-| `pplx_claude_s46` / `pplx_claude_s46_think` | claude sonnet 4.6 variants |
-| `pplx_gemini31_pro` / `pplx_gemini31_pro_think` | gemini 3.1 pro variants |
-| `pplx_gemini_flash` / `pplx_gemini_flash_think` | gemini flash variants |
-| `pplx_grok41` / `pplx_grok41_think` | grok 4.1 variants |
-| `pplx_nemotron3_super_think` | nemotron 3 super thinking |
-
-all upstream model tools support `source_focus` values: `web`, `academic`, `social`, `finance`, `all`.
-
-### how this differs from v1.0.0
-
-- old v1.0.0: one custom tool (`perplexity_search`) implemented in local TypeScript HTTP logic.
-- current: delegates to upstream `perplexity-webui-scraper` MCP, exposing the full upstream model-specific toolset.
-- result: significantly better compatibility with Perplexity anti-bot protections.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PERPLEXITY_SESSION_TOKEN` | **Yes** | Your `__Secure-next-auth.session-token` cookie value |
+| `PERPLEXITY_PROXY_URL` | No | Single proxy URL expanded into `HTTP_PROXY`, `HTTPS_PROXY`, and `ALL_PROXY` |
+| `PERPLEXITY_NO_PROXY` | No | Bypass list expanded into `NO_PROXY` |
+| `PERPLEXITY_FLARESOLVERR_URL` | No | Base URL for a running FlareSolverr instance (e.g. `http://127.0.0.1:8191`) |
+| `PERPLEXITY_FLARESOLVERR_SOLVE_URL` | No | Alternate URL to solve first. Default: `https://www.perplexity.ai/search/new` |
+| `PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT` | No | FlareSolverr solve timeout in ms. Default: `60000` |
+| `PERPLEXITY_UPSTREAM_FROM` | No | Override the upstream pip ref. For testing only. |
 
 ---
 
-### troubleshooting
+## Features
 
-| problem | solution |
+| Tool | Description |
+|------|-------------|
+| `pplx_ask` | Best-model query (auto model selection) |
+| `pplx_deep_research` | Deep research mode |
+| `pplx_sonar` | Sonar model |
+| `pplx_gpt54` / `pplx_gpt54_thinking` | GPT-5.4 variants |
+| `pplx_claude_o46` / `pplx_claude_o46_think` | Claude Opus 4.6 variants |
+| `pplx_claude_s46` / `pplx_claude_s46_think` | Claude Sonnet 4.6 variants |
+| `pplx_gemini31_pro` / `pplx_gemini31_pro_think` | Gemini 3.1 Pro variants |
+| `pplx_gemini_flash` / `pplx_gemini_flash_think` | Gemini Flash variants |
+| `pplx_grok41` / `pplx_grok41_think` | Grok 4.1 variants |
+| `pplx_nemotron3_super_think` | Nemotron 3 Super Thinking |
+
+All upstream model tools support `source_focus` values: `web`, `academic`, `social`, `finance`, `all`.
+
+---
+
+## How This Differs from v1.0.0
+
+- **Old v1.0.0:** One custom tool (`perplexity_search`) implemented in local TypeScript HTTP logic.
+- **Current:** Delegates to upstream `perplexity-webui-scraper` MCP, exposing the full upstream model-specific toolset.
+- **Result:** Significantly better compatibility with Perplexity anti-bot protections.
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
 |---------|----------|
-| **token invalid / 401** | get a fresh token from browser cookies |
-| **`uvx` not found** | install uv (`uv --version` should work) |
-| **no answer returned** | check rate limits or whether your account can access the selected model |
-| **clarifying questions error** | deep research mode may request clarifying questions first |
-| **cloudflare challenge / `Just a moment...`** | run flaresolverr and set `PERPLEXITY_FLARESOLVERR_URL=http://127.0.0.1:8191` |
-| **timeout** | deep research can take several minutes - be patient |
+| **Token invalid / 401** | Get a fresh token from browser cookies |
+| **`uvx` not found** | Install uv (`uv --version` should work) |
+| **No answer returned** | Check rate limits or whether your account can access the selected model |
+| **Clarifying questions error** | Deep research mode may request clarifying questions first |
+| **Cloudflare challenge / `Just a moment...`** | Run FlareSolverr and set `PERPLEXITY_FLARESOLVERR_URL=http://127.0.0.1:8191` |
+| **Timeout** | Deep research can take several minutes — be patient |
 
-### verify both modes quickly
+### Verify Both Modes Quickly
 
 ```bash
-PERPLEXITY_SESSION_TOKEN="your_token_here" npm run self-test
+PERPLEXITY_SESSION_TOKEN="***" npm run self-test
 ```
 
-this checks both:
-- regular search (`best`)
-- deep research (`deep-research`)
+This checks both:
+- Regular search (`best`)
+- Deep research (`deep-research`)
 
-and prints pass/fail per mode.
+And prints pass/fail per mode.
 
 ---
 
-### project structure
+## Project Structure
 
 ```
 perplexity-webui-mcp/
@@ -307,7 +324,9 @@ perplexity-webui-mcp/
 │       ├── perplexity-webui-mcp-sse.sh
 │       └── perplexity-webui-mcp.service
 ├── src/
-│   └── index.ts      # proxy launcher for upstream MCP
+│   ├── index.ts          # Proxy launcher for upstream MCP
+│   ├── index.test.ts     # Unit tests
+│   └── self-test.ts      # Self-test runner
 ├── package.json
 ├── tsconfig.json
 ├── .env.example
@@ -319,18 +338,18 @@ perplexity-webui-mcp/
 
 ---
 
-### license
+## License
 
-mit
+MIT
 
 ---
 
-### author
+## Author
 
 [Microck](https://github.com/Microck)
 
 ---
 
-### shoutout
+## Acknowledgments
 
-special thanks to [henrique-coder/perplexity-webui-scraper](https://github.com/henrique-coder/perplexity-webui-scraper) for the WebUI reverse-engineering and token CLI workflow that helped this project.
+Special thanks to [henrique-coder/perplexity-webui-scraper](https://github.com/henrique-coder/perplexity-webui-scraper) for the WebUI reverse-engineering and token CLI workflow.
