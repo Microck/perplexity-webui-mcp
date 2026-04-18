@@ -1,17 +1,115 @@
 #!/usr/bin/env node
 
-import { spawn } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import childProcess from "node:child_process";
+import nodeUrl from "node:url";
 
 const UPSTREAM_FROM =
   process.env.PERPLEXITY_UPSTREAM_FROM ??
   "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod";
 const UPSTREAM_COMMAND =
   process.env.PERPLEXITY_UPSTREAM_COMMAND ?? "perplexity-webui-scraper-mcp";
+const FLARESOLVERR_URL_KEY = "PERPLEXITY_FLARESOLVERR_URL";
+const FLARESOLVERR_SOLVE_URL_KEY = "PERPLEXITY_FLARESOLVERR_SOLVE_URL";
+const FLARESOLVERR_TIMEOUT_KEY = "PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT";
 const HTTP_PROXY_KEYS = ["HTTP_PROXY", "http_proxy"] as const;
 const HTTPS_PROXY_KEYS = ["HTTPS_PROXY", "https_proxy"] as const;
 const ALL_PROXY_KEYS = ["ALL_PROXY", "all_proxy"] as const;
 const NO_PROXY_KEYS = ["NO_PROXY", "no_proxy"] as const;
+const FLARESOLVERR_DEFAULT_UA =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
+
+export function buildFlareSolverrPythonBootstrap(): string {
+  return String.raw`
+import json
+import os
+import urllib.request
+
+from perplexity_webui_scraper.constants import API_BASE_URL, DEFAULT_HEADERS, SESSION_COOKIE_NAME
+from perplexity_webui_scraper.http import HTTPClient
+
+DEFAULT_FLARESOLVERR_UA = ${JSON.stringify(FLARESOLVERR_DEFAULT_UA)}
+
+
+def maybe_enable_flaresolverr():
+    flaresolverr_url = os.environ.get(${JSON.stringify(FLARESOLVERR_URL_KEY)}, "").strip()
+
+    if not flaresolverr_url:
+        return
+
+    solve_url = os.environ.get(
+        ${JSON.stringify(FLARESOLVERR_SOLVE_URL_KEY)},
+        "https://www.perplexity.ai/search/new",
+    ).strip()
+    max_timeout_raw = os.environ.get(${JSON.stringify(FLARESOLVERR_TIMEOUT_KEY)}, "60000").strip()
+
+    try:
+        max_timeout = int(max_timeout_raw)
+    except ValueError as error:
+        raise RuntimeError(
+            f"${FLARESOLVERR_TIMEOUT_KEY} must be an integer number of milliseconds: {max_timeout_raw}"
+        ) from error
+
+    request = urllib.request.Request(
+        f"{flaresolverr_url.rstrip('/')}/v1",
+        data=json.dumps({
+            "cmd": "request.get",
+            "url": solve_url,
+            "maxTimeout": max_timeout,
+        }).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+
+    timeout_seconds = max(60.0, max_timeout / 1000 + 30.0)
+
+    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+        data = json.load(response)
+
+    if data.get("status") != "ok":
+        raise RuntimeError(
+            f"FlareSolverr request failed: {data.get('message') or data}"
+        )
+
+    solution = data.get("solution") or {}
+    cookies = solution.get("cookies") or []
+
+    if not cookies:
+        raise RuntimeError("FlareSolverr returned no cookies for Perplexity")
+
+    solved_cookies = {
+        cookie["name"]: cookie["value"]
+        for cookie in cookies
+        if cookie.get("name") and cookie.get("value")
+    }
+
+    if not solved_cookies:
+        raise RuntimeError("FlareSolverr returned cookies, but none had usable values")
+
+    user_agent = solution.get("userAgent") or DEFAULT_FLARESOLVERR_UA
+    original_create_session = HTTPClient._create_session
+
+    # Cloudflare ties the clearance cookies to the browser route that solved them.
+    def patched_create_session(self, impersonate):
+        session = original_create_session(self, impersonate)
+        session.headers["User-Agent"] = user_agent
+
+        for name, value in solved_cookies.items():
+            session.cookies.set(name, value)
+
+        return session
+
+    HTTPClient._create_session = patched_create_session
+`;
+}
+
+const FLARESOLVERR_MCP_SCRIPT = String.raw`
+${buildFlareSolverrPythonBootstrap()}
+
+maybe_enable_flaresolverr()
+
+from perplexity_webui_scraper.mcp.server import mcp
+
+mcp.run()
+`;
 
 function fail(message: string): never {
   console.error(`perplexity-webui-mcp: ${message}`);
@@ -48,6 +146,22 @@ function setMirroredValue({
   });
 }
 
+function clearMirroredValue({
+  env,
+  keys,
+}: {
+  env: NodeJS.ProcessEnv;
+  keys: readonly string[];
+}): void {
+  keys.forEach((key) => {
+    delete env[key];
+  });
+}
+
+export function shouldUseFlareSolverr(env: NodeJS.ProcessEnv): boolean {
+  return Boolean(env[FLARESOLVERR_URL_KEY]?.trim());
+}
+
 export function buildChildEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const childEnv: NodeJS.ProcessEnv = {
     ...env,
@@ -56,6 +170,32 @@ export function buildChildEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const token = env.PERPLEXITY_SESSION_TOKEN?.trim();
   if (token) {
     childEnv.PERPLEXITY_SESSION_TOKEN = token;
+  }
+
+  const flaresolverrUrl = env[FLARESOLVERR_URL_KEY]?.trim();
+  if (flaresolverrUrl) {
+    childEnv[FLARESOLVERR_URL_KEY] = flaresolverrUrl;
+  }
+
+  const flaresolverrSolveUrl = env[FLARESOLVERR_SOLVE_URL_KEY]?.trim();
+  if (flaresolverrSolveUrl) {
+    childEnv[FLARESOLVERR_SOLVE_URL_KEY] = flaresolverrSolveUrl;
+  }
+
+  const flaresolverrTimeout = env[FLARESOLVERR_TIMEOUT_KEY]?.trim();
+  if (flaresolverrTimeout) {
+    childEnv[FLARESOLVERR_TIMEOUT_KEY] = flaresolverrTimeout;
+  }
+
+  if (flaresolverrUrl) {
+    // FlareSolverr clears the challenge inside its own browser session, so the
+    // upstream client should not reuse an unrelated HTTP/SOCKS proxy route.
+    clearMirroredValue({ env: childEnv, keys: HTTP_PROXY_KEYS });
+    clearMirroredValue({ env: childEnv, keys: HTTPS_PROXY_KEYS });
+    clearMirroredValue({ env: childEnv, keys: ALL_PROXY_KEYS });
+    clearMirroredValue({ env: childEnv, keys: NO_PROXY_KEYS });
+
+    return childEnv;
   }
 
   const proxyUrl = env.PERPLEXITY_PROXY_URL?.trim();
@@ -113,6 +253,14 @@ export function buildChildEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return childEnv;
 }
 
+export function buildRunnerArgs(env: NodeJS.ProcessEnv): string[] {
+  if (shouldUseFlareSolverr(env)) {
+    return ["--from", UPSTREAM_FROM, "python", "-c", FLARESOLVERR_MCP_SCRIPT];
+  }
+
+  return ["--from", UPSTREAM_FROM, UPSTREAM_COMMAND];
+}
+
 function main(): void {
   const token = process.env.PERPLEXITY_SESSION_TOKEN?.trim();
   if (!token) {
@@ -121,7 +269,7 @@ function main(): void {
     );
   }
 
-  const child = spawn("uvx", ["--from", UPSTREAM_FROM, UPSTREAM_COMMAND], {
+  const child = childProcess.spawn("uvx", buildRunnerArgs(process.env), {
     stdio: "inherit",
     env: buildChildEnv(process.env),
   });
@@ -159,6 +307,6 @@ function main(): void {
 
 const currentEntryPoint = process.argv[1];
 
-if (currentEntryPoint && import.meta.url === pathToFileURL(currentEntryPoint).href) {
+if (currentEntryPoint && import.meta.url === nodeUrl.pathToFileURL(currentEntryPoint).href) {
   main();
 }

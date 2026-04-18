@@ -48,13 +48,23 @@ PERPLEXITY_PROXY_URL="socks5://127.0.0.1:1080" \
 npx perplexity-webui-mcp
 ```
 
+manual run with flaresolverr:
+
+```bash
+docker run -d --name flaresolverr -p 8191:8191 ghcr.io/flaresolverr/flaresolverr:latest
+
+PERPLEXITY_SESSION_TOKEN="your_token_here" \
+PERPLEXITY_FLARESOLVERR_URL="http://127.0.0.1:8191" \
+npx perplexity-webui-mcp
+```
+
 > **important:** this uses perplexity's internal webui api with a session cookie. for personal/local tinkering only - not affiliated with perplexity ai.
 
 ---
 
 ### overview
 
-perplexity-webui-mcp is a local stdio MCP wrapper that launches the upstream `perplexity-webui-scraper` MCP server through `uvx`. this keeps your package on npm while using the upstream battle-tested WebUI implementation (browser impersonation, retry logic, model-specific tools, and token CLI ecosystem).
+perplexity-webui-mcp is a local stdio mcp wrapper that launches the upstream `perplexity-webui-scraper` mcp server through `uvx`. this keeps the package on npm while using the upstream webui implementation for browser impersonation, retry logic, model-specific tools, and token tooling.
 
 ---
 
@@ -127,6 +137,10 @@ proxy support:
 - standard proxy env vars already pass through: `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` and their lowercase variants
 - for a simpler single-value setup, set `PERPLEXITY_PROXY_URL`; the wrapper expands it into the standard proxy env vars before launching the upstream MCP server
 - optional bypass list: `PERPLEXITY_NO_PROXY`
+- if perplexity keeps returning cloudflare challenge pages, set `PERPLEXITY_FLARESOLVERR_URL` to a running flaresolverr instance. the wrapper solves `https://www.perplexity.ai/search/new`, injects the returned cookies into the upstream `curl_cffi` session, and stops forwarding the standard proxy env vars in that mode
+- optional flaresolverr overrides:
+  - `PERPLEXITY_FLARESOLVERR_SOLVE_URL` - alternate url to solve first. default: `https://www.perplexity.ai/search/new`
+  - `PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT` - flaresolverr solve timeout in milliseconds. default: `60000`
 
 note: deep research can take longer than 60 seconds. if your client supports it, set a higher `timeout` (example: 10 minutes).
 
@@ -140,8 +154,7 @@ note: deep research can take longer than 60 seconds. if your client supports it,
       "timeout": 600000,
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "your_session_token_here",
-        "PERPLEXITY_PROXY_URL": "socks5://127.0.0.1:1080",
-        "PERPLEXITY_NO_PROXY": "localhost,127.0.0.1"
+        "PERPLEXITY_FLARESOLVERR_URL": "http://127.0.0.1:8191"
       }
     }
   }
@@ -159,13 +172,34 @@ note: deep research can take longer than 60 seconds. if your client supports it,
       "timeout": 600000,
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "your_session_token_here",
-        "PERPLEXITY_PROXY_URL": "socks5://127.0.0.1:1080",
-        "PERPLEXITY_NO_PROXY": "localhost,127.0.0.1"
+        "PERPLEXITY_FLARESOLVERR_URL": "http://127.0.0.1:8191"
       }
     }
   }
 }
 ```
+
+### using flaresolverr when cloudflare blocks your host
+
+start flaresolverr:
+
+```bash
+docker run -d --name flaresolverr -p 8191:8191 ghcr.io/flaresolverr/flaresolverr:latest
+curl http://127.0.0.1:8191/
+```
+
+then point the wrapper at it:
+
+```bash
+PERPLEXITY_SESSION_TOKEN="your_token_here" \
+PERPLEXITY_FLARESOLVERR_URL="http://127.0.0.1:8191" \
+npx perplexity-webui-mcp
+```
+
+flaresolverr mode:
+- the wrapper solves the cloudflare wall in flaresolverr first, then injects the returned cookies into the upstream session
+- the wrapper does not forward `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, or `NO_PROXY` to the upstream process in this mode because the solved cookies need to stay tied to the flaresolverr browser route
+- if flaresolverr itself needs a proxy, configure that on the flaresolverr side instead of on `perplexity-webui-mcp`
 
 ### remote deployment over tailscale (optional)
 
@@ -246,6 +280,7 @@ all upstream model tools support `source_focus` values: `web`, `academic`, `soci
 | **`uvx` not found** | install uv (`uv --version` should work) |
 | **no answer returned** | check rate limits or whether your account can access the selected model |
 | **clarifying questions error** | deep research mode may request clarifying questions first |
+| **cloudflare challenge / `Just a moment...`** | run flaresolverr and set `PERPLEXITY_FLARESOLVERR_URL=http://127.0.0.1:8191` |
 | **timeout** | deep research can take several minutes - be patient |
 
 ### verify both modes quickly

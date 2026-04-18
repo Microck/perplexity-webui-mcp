@@ -55,6 +55,10 @@ Proxy note:
 - if you already use standard proxy env vars such as `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, or `NO_PROXY`, the wrapper forwards them to the upstream process
 - if you want one wrapper-specific knob, set `PERPLEXITY_PROXY_URL`; it is expanded into the standard proxy env vars before the upstream MCP server starts
 - use `PERPLEXITY_NO_PROXY` for bypass hosts
+- if your host gets stuck on Cloudflare challenge pages, run FlareSolverr and set `PERPLEXITY_FLARESOLVERR_URL`; the wrapper will solve `https://www.perplexity.ai/search/new` first and inject the resulting cookies into the upstream session
+- optional FlareSolverr overrides:
+  - `PERPLEXITY_FLARESOLVERR_SOLVE_URL` - alternate URL to solve first. default: `https://www.perplexity.ai/search/new`
+  - `PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT` - FlareSolverr solve timeout in milliseconds. default: `60000`
 
 **If installed via npm:**
 
@@ -66,8 +70,7 @@ Proxy note:
       "timeout": 600000,
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE",
-        "PERPLEXITY_PROXY_URL": "socks5://127.0.0.1:1080",
-        "PERPLEXITY_NO_PROXY": "localhost,127.0.0.1"
+        "PERPLEXITY_FLARESOLVERR_URL": "http://127.0.0.1:8191"
       }
     }
   }
@@ -85,13 +88,40 @@ Proxy note:
       "timeout": 600000,
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE",
-        "PERPLEXITY_PROXY_URL": "socks5://127.0.0.1:1080",
-        "PERPLEXITY_NO_PROXY": "localhost,127.0.0.1"
+        "PERPLEXITY_FLARESOLVERR_URL": "http://127.0.0.1:8191"
       }
     }
   }
 }
 ```
+
+### Optional: use FlareSolverr for Cloudflare-challenged hosts
+
+Start FlareSolverr locally:
+
+```bash
+docker run -d --name flaresolverr -p 8191:8191 ghcr.io/flaresolverr/flaresolverr:latest
+curl http://127.0.0.1:8191/
+```
+
+Then point the wrapper at it:
+
+```json
+{
+  "mcpServers": {
+    "perplexity": {
+      "command": "perplexity-webui-mcp",
+      "timeout": 600000,
+      "env": {
+        "PERPLEXITY_SESSION_TOKEN": "YOUR_TOKEN_HERE",
+        "PERPLEXITY_FLARESOLVERR_URL": "http://127.0.0.1:8191"
+      }
+    }
+  }
+}
+```
+
+In this mode the wrapper does not forward `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, or `NO_PROXY` to the upstream process. The solved cookies need to stay tied to the FlareSolverr browser route.
 
 ### 4. Restart your MCP client
 
@@ -153,6 +183,7 @@ PERPLEXITY_SESSION_TOKEN="YOUR_TOKEN_HERE" npm run self-test
 | Command not found | Run `npm install -g perplexity-webui-mcp` again |
 | `uvx` not found | Install uv and ensure `uvx --version` works |
 | No answer returned | Check rate limits or whether your account can access selected model |
+| Cloudflare challenge / `Just a moment...` | Run FlareSolverr and set `PERPLEXITY_FLARESOLVERR_URL=http://127.0.0.1:8191` |
 | Timeout | Deep research can take several minutes - be patient |
 
 ## Acknowledgment
@@ -167,3 +198,6 @@ This project was built with help from:
 | `PERPLEXITY_SESSION_TOKEN` | Yes | Your `__Secure-next-auth.session-token` cookie value |
 | `PERPLEXITY_PROXY_URL` | No | Single proxy URL expanded into `HTTP_PROXY`, `HTTPS_PROXY`, and `ALL_PROXY` for the upstream process |
 | `PERPLEXITY_NO_PROXY` | No | Optional bypass list expanded into `NO_PROXY` |
+| `PERPLEXITY_FLARESOLVERR_URL` | No | Base URL for a running FlareSolverr instance, for example `http://127.0.0.1:8191` |
+| `PERPLEXITY_FLARESOLVERR_SOLVE_URL` | No | Alternate Perplexity URL to solve before the upstream client starts. default: `https://www.perplexity.ai/search/new` |
+| `PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT` | No | FlareSolverr solve timeout in milliseconds. default: `60000` |
