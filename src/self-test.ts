@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
+import childProcess from "node:child_process";
+
+import { buildFlareSolverrPythonBootstrap } from "./index.js";
 
 type ModeResult = {
   ok: boolean;
@@ -64,6 +66,10 @@ from perplexity_webui_scraper import (
   SearchFocus,
   SourceFocus,
 )
+
+${buildFlareSolverrPythonBootstrap()}
+
+maybe_enable_flaresolverr()
 
 token = os.environ.get("PERPLEXITY_SESSION_TOKEN", "").strip()
 result = {
@@ -133,7 +139,7 @@ client.close()
 print(json.dumps(result))
 `;
 
-  const run = spawnSync(
+  const run = childProcess.spawnSync(
     "uvx",
     [
       "--from",

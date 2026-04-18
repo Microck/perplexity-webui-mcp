@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildChildEnv } from "./index.js";
+import { buildChildEnv, buildRunnerArgs, shouldUseFlareSolverr } from "./index.js";
 
 test("buildChildEnv mirrors explicit proxy env vars across upper and lower case", () => {
   const childEnv = buildChildEnv({
@@ -49,4 +49,45 @@ test("buildChildEnv does not override already-set standard proxy env vars", () =
   assert.equal(childEnv.https_proxy, "http://existing-https:8443");
   assert.equal(childEnv.ALL_PROXY, "socks5://existing-all:1080");
   assert.equal(childEnv.all_proxy, "socks5://existing-all:1080");
+});
+
+test("buildChildEnv strips proxy env vars when FlareSolverr mode is enabled", () => {
+  const childEnv = buildChildEnv({
+    PERPLEXITY_SESSION_TOKEN: "token-value",
+    PERPLEXITY_FLARESOLVERR_URL: " http://127.0.0.1:8191 ",
+    PERPLEXITY_FLARESOLVERR_SOLVE_URL: " https://www.perplexity.ai/search/new ",
+    PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT: " 90000 ",
+    HTTP_PROXY: "http://existing-http:8080",
+    HTTPS_PROXY: "http://existing-https:8443",
+    ALL_PROXY: "socks5://existing-all:1080",
+    NO_PROXY: "localhost,.internal",
+  });
+
+  assert.equal(childEnv.PERPLEXITY_FLARESOLVERR_URL, "http://127.0.0.1:8191");
+  assert.equal(
+    childEnv.PERPLEXITY_FLARESOLVERR_SOLVE_URL,
+    "https://www.perplexity.ai/search/new",
+  );
+  assert.equal(childEnv.PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT, "90000");
+  assert.equal(childEnv.HTTP_PROXY, undefined);
+  assert.equal(childEnv.HTTPS_PROXY, undefined);
+  assert.equal(childEnv.ALL_PROXY, undefined);
+  assert.equal(childEnv.NO_PROXY, undefined);
+});
+
+test("FlareSolverr mode switches the wrapper to the python bridge", () => {
+  assert.equal(shouldUseFlareSolverr({}), false);
+  assert.equal(
+    shouldUseFlareSolverr({ PERPLEXITY_FLARESOLVERR_URL: "http://127.0.0.1:8191" }),
+    true,
+  );
+
+  const args = buildRunnerArgs({
+    PERPLEXITY_FLARESOLVERR_URL: "http://127.0.0.1:8191",
+  });
+
+  assert.equal(args[0], "--from");
+  assert.equal(args[2], "python");
+  assert.equal(args[3], "-c");
+  assert.match(args[4] ?? "", /maybe_enable_flaresolverr/);
 });
