@@ -1,5 +1,20 @@
 #!/usr/bin/env node
 
+/**
+ * @module perplexity-webui-mcp
+ *
+ * MCP wrapper around `perplexity-webui-scraper`. Spawns the upstream Python
+ * MCP server via `uvx`, propagates proxy environment variables (with upper/
+ * lower-case sync), and forwards OS signals to the child process.
+ *
+ * Configuration is through environment variables:
+ * - `PERPLEXITY_SESSION_TOKEN` (required) — Perplexity WebUI session cookie.
+ * - `PERPLEXITY_UPSTREAM_FROM` — uvx package spec for the upstream scraper.
+ * - `PERPLEXITY_UPSTREAM_COMMAND` — binary name inside the uvx package.
+ * - `PERPLEXITY_PROXY_URL` — convenience var that sets all proxy env vars.
+ * - `PERPLEXITY_NO_PROXY` — hosts to exclude from proxying.
+ */
+
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
@@ -13,11 +28,19 @@ const HTTPS_PROXY_KEYS = ["HTTPS_PROXY", "https_proxy"] as const;
 const ALL_PROXY_KEYS = ["ALL_PROXY", "all_proxy"] as const;
 const NO_PROXY_KEYS = ["NO_PROXY", "no_proxy"] as const;
 
+/** Print an error message to stderr and exit with code 1. */
 function fail(message: string): never {
   console.error(`perplexity-webui-mcp: ${message}`);
   process.exit(1);
 }
 
+/**
+ * Return the first non-empty trimmed value found in `env` for the given keys.
+ *
+ * @param env - The environment variables object to search.
+ * @param keys - An ordered list of environment variable names to check.
+ * @returns The first trimmed non-empty value, or `undefined` if none found.
+ */
 function getFirstNonEmptyValue({
   env,
   keys,
@@ -34,6 +57,14 @@ function getFirstNonEmptyValue({
     });
 }
 
+/**
+ * Set all keys in the given group to the same value, ensuring upper and lower
+ * case variants stay in sync (e.g. `HTTPS_PROXY` and `https_proxy`).
+ *
+ * @param env - The environment variables object to mutate.
+ * @param keys - The environment variable names to set.
+ * @param value - The value to assign to every key.
+ */
 function setMirroredValue({
   env,
   keys,
@@ -48,6 +79,17 @@ function setMirroredValue({
   });
 }
 
+/**
+ * Build the environment object for the child process.
+ *
+ * Copies the parent environment, trims the session token, and propagates
+ * proxy settings from either standard proxy env vars (`HTTPS_PROXY`, etc.)
+ * or the convenience `PERPLEXITY_PROXY_URL` / `PERPLEXITY_NO_PROXY` vars.
+ * Upper and lower case proxy variants are kept in sync.
+ *
+ * @param env - The parent `process.env` to inherit from.
+ * @returns A new environment object for the child process.
+ */
 export function buildChildEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const childEnv: NodeJS.ProcessEnv = {
     ...env,
@@ -113,6 +155,11 @@ export function buildChildEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return childEnv;
 }
 
+/**
+ * Entry point — validate the session token, spawn the upstream MCP server
+ * via `uvx`, and forward signals (SIGINT, SIGTERM) to the child process.
+ * Exits with the child's exit code.
+ */
 function main(): void {
   const token = process.env.PERPLEXITY_SESSION_TOKEN?.trim();
   if (!token) {
