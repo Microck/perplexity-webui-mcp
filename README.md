@@ -307,7 +307,9 @@ perplexity-webui-mcp/
 │       ├── perplexity-webui-mcp-sse.sh
 │       └── perplexity-webui-mcp.service
 ├── src/
-│   └── index.ts      # proxy launcher for upstream MCP
+│   ├── index.ts        # proxy launcher for upstream MCP
+│   ├── index.test.ts   # unit tests for env/arg builders
+│   └── self-test.ts    # integration self-test (regular + deep research)
 ├── package.json
 ├── tsconfig.json
 ├── .env.example
