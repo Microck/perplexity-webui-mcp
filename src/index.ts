@@ -168,8 +168,14 @@ export function normalizeMessageForUpstream(message: string): string {
   return message;
 }
 
-export function normalizeMessageForParent(message: string): string {
-  const parsed: unknown = JSON.parse(message);
+export function normalizeMessageForParent(message: string): string | undefined {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(message);
+  } catch {
+    return undefined;
+  }
 
   if (
     typeof parsed !== "object" ||
@@ -270,7 +276,13 @@ function forwardChildOutputToParent(child: childProcess.ChildProcess): void {
       buffer = buffer.slice(newline + 1);
 
       if (line.length > 0) {
-        writeFramedMessage(normalizeMessageForParent(line));
+        const normalizedMessage = normalizeMessageForParent(line);
+
+        if (normalizedMessage) {
+          writeFramedMessage(normalizedMessage);
+        } else if (process.env.PERPLEXITY_DEBUG_STDERR === "1") {
+          process.stderr.write(`perplexity-webui-mcp: dropped non-json upstream stdout: ${line}\n`);
+        }
       }
     }
   });
@@ -430,12 +442,20 @@ function main(): void {
   }
 
   const child = childProcess.spawn("uvx", buildRunnerArgs(process.env), {
-    stdio: ["pipe", "pipe", "inherit"],
+    // Keep the upstream Python server's Rich startup banner away from the MCP
+    // client's startup stream. Codex is strict during initialize, and inherited
+    // stderr has caused this bridge to be killed while handshaking.
+    stdio: ["pipe", "pipe", "pipe"],
     env: buildChildEnv(process.env),
   });
 
   forwardParentInputToChild(child);
   forwardChildOutputToParent(child);
+  child.stderr?.on("data", (chunk: Buffer) => {
+    if (process.env.PERPLEXITY_DEBUG_STDERR === "1") {
+      process.stderr.write(chunk);
+    }
+  });
 
   child.on("error", (error) => {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

@@ -124,6 +124,7 @@ test("FlareSolverr bridge normalizes initialize protocol for upstream compatibil
     },
   }));
 
+  assert.ok(parentMessage);
   assert.equal(JSON.parse(parentMessage).result.protocolVersion, "2025-06-18");
 
   const passthrough = JSON.stringify({
@@ -134,4 +135,8 @@ test("FlareSolverr bridge normalizes initialize protocol for upstream compatibil
   });
 
   assert.equal(normalizeMessageForUpstream(passthrough), passthrough);
+});
+
+test("bridge drops non-json upstream stdout instead of framing it as MCP", () => {
+  assert.equal(normalizeMessageForParent("Installed 1 package in 12ms"), undefined);
 });
