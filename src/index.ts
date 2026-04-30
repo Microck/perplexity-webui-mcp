@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import childProcess from "node:child_process";
+import fs from "node:fs";
 import nodeUrl from "node:url";
 
 const UPSTREAM_FROM =
@@ -127,14 +128,65 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-function writeFramedMessage(message: string): void {
-  process.stdout.write(
-    `Content-Length: ${Buffer.byteLength(message, "utf8")}\r\n\r\n${message}`,
-  );
+function debugLog(message: string): void {
+  const logPath = process.env.PERPLEXITY_DEBUG_LOG?.trim();
+
+  if (!logPath) {
+    return;
+  }
+
+  try {
+    fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
+  } catch {
+    // Debug logging must never break the MCP transport.
+  }
+}
+
+function describeJsonRpcMessage(message: string): string {
+  try {
+    const parsed = JSON.parse(message) as {
+      id?: unknown;
+      method?: unknown;
+      result?: unknown;
+      error?: unknown;
+    };
+
+    if (typeof parsed.method === "string") {
+      return `method=${parsed.method} id=${String(parsed.id ?? "")}`;
+    }
+
+    if ("result" in parsed) {
+      return `result id=${String(parsed.id ?? "")}`;
+    }
+
+    if ("error" in parsed) {
+      return `error id=${String(parsed.id ?? "")}`;
+    }
+  } catch {
+    return `non-json length=${message.length}`;
+  }
+
+  return `json length=${message.length}`;
 }
 
 const UPSTREAM_PROTOCOL_VERSION = "2024-11-05";
 const requestedProtocolVersionsById = new Map<string | number, string>();
+let parentOutputMode: "framed" | "line" = "framed";
+
+export function formatMessageForParent(
+  message: string,
+  mode: "framed" | "line" = parentOutputMode,
+): string {
+  if (mode === "line") {
+    return `${message}\n`;
+  }
+
+  return `Content-Length: ${Buffer.byteLength(message, "utf8")}\r\n\r\n${message}`;
+}
+
+function writeMessageForParent(message: string): void {
+  process.stdout.write(formatMessageForParent(message));
+}
 
 export function normalizeMessageForUpstream(message: string): string {
   const parsed: unknown = JSON.parse(message);
@@ -196,10 +248,10 @@ export function normalizeMessageForParent(message: string): string | undefined {
   const requestedProtocolVersion = requestedProtocolVersionsById.get(response.id);
 
   if (response.result?.capabilities) {
-    const { extensions: _extensions, ...capabilities } = response.result.capabilities;
+    const tools = response.result.capabilities.tools;
     response.result = {
       ...response.result,
-      capabilities,
+      capabilities: tools === undefined ? {} : { tools },
     };
   }
 
@@ -234,6 +286,8 @@ function forwardParentInputToChild(child: childProcess.ChildProcess): void {
         buffer = buffer.subarray(newline + 1);
 
         if (line.length > 0) {
+          parentOutputMode = "line";
+          debugLog(`parent->upstream line ${describeJsonRpcMessage(line)}`);
           child.stdin?.write(`${normalizeMessageForUpstream(line)}\n`);
         }
 
@@ -257,6 +311,8 @@ function forwardParentInputToChild(child: childProcess.ChildProcess): void {
 
       const body = buffer.subarray(bodyStart, frameEnd).toString("utf8");
       buffer = buffer.subarray(frameEnd);
+      parentOutputMode = "framed";
+      debugLog(`parent->upstream frame ${describeJsonRpcMessage(body)}`);
       child.stdin?.write(`${normalizeMessageForUpstream(body)}\n`);
     }
   });
@@ -288,7 +344,8 @@ function forwardChildOutputToParent(child: childProcess.ChildProcess): void {
         const normalizedMessage = normalizeMessageForParent(line);
 
         if (normalizedMessage) {
-          writeFramedMessage(normalizedMessage);
+          debugLog(`upstream->parent ${describeJsonRpcMessage(line)}`);
+          writeMessageForParent(normalizedMessage);
         } else if (process.env.PERPLEXITY_DEBUG_STDERR === "1") {
           process.stderr.write(`perplexity-webui-mcp: dropped non-json upstream stdout: ${line}\n`);
         }
@@ -461,6 +518,8 @@ function main(): void {
   forwardParentInputToChild(child);
   forwardChildOutputToParent(child);
   child.stderr?.on("data", (chunk: Buffer) => {
+    debugLog(`upstream stderr ${chunk.toString("utf8").trimEnd()}`);
+
     if (process.env.PERPLEXITY_DEBUG_STDERR === "1") {
       process.stderr.write(chunk);
     }
@@ -477,6 +536,8 @@ function main(): void {
   });
 
   child.on("exit", (code, signal) => {
+    debugLog(`upstream exit code=${String(code)} signal=${String(signal)}`);
+
     if (signal) {
       process.kill(process.pid, signal);
       return;

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildChildEnv,
   buildRunnerArgs,
+  formatMessageForParent,
   normalizeMessageForParent,
   normalizeMessageForUpstream,
   shouldUseFlareSolverr,
@@ -120,6 +121,10 @@ test("FlareSolverr bridge normalizes initialize protocol for upstream compatibil
     result: {
       protocolVersion: "2024-11-05",
       capabilities: {
+        experimental: {},
+        logging: {},
+        prompts: { listChanged: true },
+        resources: { subscribe: true, listChanged: true },
         tools: { listChanged: true },
         extensions: { "io.modelcontextprotocol/ui": {} },
       },
@@ -129,7 +134,9 @@ test("FlareSolverr bridge normalizes initialize protocol for upstream compatibil
 
   assert.ok(parentMessage);
   assert.equal(JSON.parse(parentMessage).result.protocolVersion, "2025-06-18");
-  assert.equal(JSON.parse(parentMessage).result.capabilities.extensions, undefined);
+  assert.deepEqual(JSON.parse(parentMessage).result.capabilities, {
+    tools: { listChanged: true },
+  });
 
   const passthrough = JSON.stringify({
     jsonrpc: "2.0",
@@ -143,4 +150,14 @@ test("FlareSolverr bridge normalizes initialize protocol for upstream compatibil
 
 test("bridge drops non-json upstream stdout instead of framing it as MCP", () => {
   assert.equal(normalizeMessageForParent("Installed 1 package in 12ms"), undefined);
+});
+
+test("bridge formats parent responses to match the client transport", () => {
+  const message = JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} });
+
+  assert.equal(formatMessageForParent(message, "line"), `${message}\n`);
+  assert.equal(
+    formatMessageForParent(message, "framed"),
+    `Content-Length: ${Buffer.byteLength(message, "utf8")}\r\n\r\n${message}`,
+  );
 });
