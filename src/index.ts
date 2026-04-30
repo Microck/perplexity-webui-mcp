@@ -24,10 +24,21 @@ import json
 import os
 import urllib.request
 
+from curl_cffi.requests import BrowserTypeLiteral
+from perplexity_webui_scraper.config import ClientConfig
 from perplexity_webui_scraper.constants import API_BASE_URL, DEFAULT_HEADERS, SESSION_COOKIE_NAME
 from perplexity_webui_scraper.http import HTTPClient
+from perplexity_webui_scraper.models import MODELS
 
 DEFAULT_FLARESOLVERR_UA = ${JSON.stringify(FLARESOLVERR_DEFAULT_UA)}
+
+ClientConfig.model_rebuild(_types_namespace={"BrowserTypeLiteral": BrowserTypeLiteral})
+
+# Perplexity currently rejects the upstream "best" model only when it is sent
+# as mode="search". Keep the public pplx_ask tool and auto model identifier,
+# but send it through the same copilot request path that the working model
+# tools use.
+object.__setattr__(MODELS.best, "mode", "copilot")
 
 
 def maybe_enable_flaresolverr():
@@ -114,6 +125,89 @@ mcp.run()
 function fail(message: string): never {
   console.error(`perplexity-webui-mcp: ${message}`);
   process.exit(1);
+}
+
+function writeFramedMessage(message: string): void {
+  process.stdout.write(
+    `Content-Length: ${Buffer.byteLength(message, "utf8")}\r\n\r\n${message}`,
+  );
+}
+
+function forwardParentInputToChild(child: childProcess.ChildProcess): void {
+  let buffer = Buffer.alloc(0);
+
+  process.stdin.on("data", (chunk: Buffer) => {
+    buffer = Buffer.concat([buffer, chunk]);
+
+    while (buffer.length > 0) {
+      const headerEnd = buffer.indexOf("\r\n\r\n");
+
+      if (headerEnd === -1) {
+        const newline = buffer.indexOf("\n");
+
+        if (newline === -1) {
+          return;
+        }
+
+        const line = buffer.subarray(0, newline).toString("utf8").trim();
+        buffer = buffer.subarray(newline + 1);
+
+        if (line.length > 0) {
+          child.stdin?.write(`${line}\n`);
+        }
+
+        continue;
+      }
+
+      const header = buffer.subarray(0, headerEnd).toString("utf8");
+      const lengthMatch = /^Content-Length:\s*(\d+)\s*$/im.exec(header);
+
+      if (!lengthMatch) {
+        fail("received malformed MCP frame without Content-Length");
+      }
+
+      const bodyStart = headerEnd + 4;
+      const bodyLength = Number.parseInt(lengthMatch[1], 10);
+      const frameEnd = bodyStart + bodyLength;
+
+      if (buffer.length < frameEnd) {
+        return;
+      }
+
+      const body = buffer.subarray(bodyStart, frameEnd).toString("utf8");
+      buffer = buffer.subarray(frameEnd);
+      child.stdin?.write(`${body}\n`);
+    }
+  });
+
+  process.stdin.on("end", () => {
+    child.stdin?.end();
+  });
+}
+
+function forwardChildOutputToParent(child: childProcess.ChildProcess): void {
+  child.stdout?.setEncoding("utf8");
+
+  let buffer = "";
+
+  child.stdout?.on("data", (chunk: string) => {
+    buffer += chunk;
+
+    while (true) {
+      const newline = buffer.indexOf("\n");
+
+      if (newline === -1) {
+        return;
+      }
+
+      const line = buffer.slice(0, newline).trim();
+      buffer = buffer.slice(newline + 1);
+
+      if (line.length > 0) {
+        writeFramedMessage(line);
+      }
+    }
+  });
 }
 
 function getFirstNonEmptyValue({
@@ -270,9 +364,12 @@ function main(): void {
   }
 
   const child = childProcess.spawn("uvx", buildRunnerArgs(process.env), {
-    stdio: "inherit",
+    stdio: ["pipe", "pipe", "inherit"],
     env: buildChildEnv(process.env),
   });
+
+  forwardParentInputToChild(child);
+  forwardChildOutputToParent(child);
 
   child.on("error", (error) => {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

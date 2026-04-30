@@ -90,4 +90,6 @@ test("FlareSolverr mode switches the wrapper to the python bridge", () => {
   assert.equal(args[2], "python");
   assert.equal(args[3], "-c");
   assert.match(args[4] ?? "", /maybe_enable_flaresolverr/);
+  assert.match(args[4] ?? "", /ClientConfig\.model_rebuild/);
+  assert.match(args[4] ?? "", /object\.__setattr__\(MODELS\.best, "mode", "copilot"\)/);
 });
