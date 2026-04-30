@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildChildEnv, buildRunnerArgs, shouldUseFlareSolverr } from "./index.js";
+import {
+  buildChildEnv,
+  buildRunnerArgs,
+  normalizeMessageForParent,
+  normalizeMessageForUpstream,
+  shouldUseFlareSolverr,
+} from "./index.js";
 
 test("buildChildEnv mirrors explicit proxy env vars across upper and lower case", () => {
   const childEnv = buildChildEnv({
@@ -92,4 +98,40 @@ test("FlareSolverr mode switches the wrapper to the python bridge", () => {
   assert.match(args[4] ?? "", /maybe_enable_flaresolverr/);
   assert.match(args[4] ?? "", /ClientConfig\.model_rebuild/);
   assert.match(args[4] ?? "", /object\.__setattr__\(MODELS\.best, "mode", "copilot"\)/);
+});
+
+test("FlareSolverr bridge normalizes initialize protocol for upstream compatibility", () => {
+  const upstreamMessage = normalizeMessageForUpstream(JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "test", version: "1.0.0" },
+    },
+  }));
+
+  assert.equal(JSON.parse(upstreamMessage).params.protocolVersion, "2024-11-05");
+
+  const parentMessage = normalizeMessageForParent(JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    result: {
+      protocolVersion: "2024-11-05",
+      capabilities: {},
+      serverInfo: { name: "test", version: "1.0.0" },
+    },
+  }));
+
+  assert.equal(JSON.parse(parentMessage).result.protocolVersion, "2025-06-18");
+
+  const passthrough = JSON.stringify({
+    jsonrpc: "2.0",
+    id: 2,
+    method: "tools/list",
+    params: {},
+  });
+
+  assert.equal(normalizeMessageForUpstream(passthrough), passthrough);
 });

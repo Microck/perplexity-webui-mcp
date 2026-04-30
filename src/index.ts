@@ -133,6 +133,72 @@ function writeFramedMessage(message: string): void {
   );
 }
 
+const UPSTREAM_PROTOCOL_VERSION = "2024-11-05";
+const requestedProtocolVersionsById = new Map<string | number, string>();
+
+export function normalizeMessageForUpstream(message: string): string {
+  const parsed: unknown = JSON.parse(message);
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("method" in parsed) ||
+    (parsed as { method?: unknown }).method !== "initialize" ||
+    !("id" in parsed)
+  ) {
+    return message;
+  }
+
+  const initializeMessage = parsed as {
+    id: string | number;
+    params?: { protocolVersion?: unknown };
+  };
+  const requestedProtocolVersion = initializeMessage.params?.protocolVersion;
+
+  if (typeof requestedProtocolVersion === "string") {
+    requestedProtocolVersionsById.set(initializeMessage.id, requestedProtocolVersion);
+    initializeMessage.params = {
+      ...initializeMessage.params,
+      protocolVersion: UPSTREAM_PROTOCOL_VERSION,
+    };
+
+    return JSON.stringify(initializeMessage);
+  }
+
+  return message;
+}
+
+export function normalizeMessageForParent(message: string): string {
+  const parsed: unknown = JSON.parse(message);
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("id" in parsed) ||
+    !("result" in parsed)
+  ) {
+    return message;
+  }
+
+  const response = parsed as {
+    id: string | number;
+    result?: { protocolVersion?: unknown };
+  };
+  const requestedProtocolVersion = requestedProtocolVersionsById.get(response.id);
+
+  if (requestedProtocolVersion && response.result?.protocolVersion) {
+    response.result = {
+      ...response.result,
+      protocolVersion: requestedProtocolVersion,
+    };
+    requestedProtocolVersionsById.delete(response.id);
+
+    return JSON.stringify(response);
+  }
+
+  return message;
+}
+
 function forwardParentInputToChild(child: childProcess.ChildProcess): void {
   let buffer = Buffer.alloc(0);
 
@@ -153,7 +219,7 @@ function forwardParentInputToChild(child: childProcess.ChildProcess): void {
         buffer = buffer.subarray(newline + 1);
 
         if (line.length > 0) {
-          child.stdin?.write(`${line}\n`);
+          child.stdin?.write(`${normalizeMessageForUpstream(line)}\n`);
         }
 
         continue;
@@ -176,7 +242,7 @@ function forwardParentInputToChild(child: childProcess.ChildProcess): void {
 
       const body = buffer.subarray(bodyStart, frameEnd).toString("utf8");
       buffer = buffer.subarray(frameEnd);
-      child.stdin?.write(`${body}\n`);
+      child.stdin?.write(`${normalizeMessageForUpstream(body)}\n`);
     }
   });
 
@@ -204,7 +270,7 @@ function forwardChildOutputToParent(child: childProcess.ChildProcess): void {
       buffer = buffer.slice(newline + 1);
 
       if (line.length > 0) {
-        writeFramedMessage(line);
+        writeFramedMessage(normalizeMessageForParent(line));
       }
     }
   });
