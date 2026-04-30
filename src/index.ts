@@ -188,9 +188,20 @@ export function normalizeMessageForParent(message: string): string | undefined {
 
   const response = parsed as {
     id: string | number;
-    result?: { protocolVersion?: unknown };
+    result?: {
+      protocolVersion?: unknown;
+      capabilities?: Record<string, unknown>;
+    };
   };
   const requestedProtocolVersion = requestedProtocolVersionsById.get(response.id);
+
+  if (response.result?.capabilities) {
+    const { extensions: _extensions, ...capabilities } = response.result.capabilities;
+    response.result = {
+      ...response.result,
+      capabilities,
+    };
+  }
 
   if (requestedProtocolVersion && response.result?.protocolVersion) {
     response.result = {
@@ -198,11 +209,9 @@ export function normalizeMessageForParent(message: string): string | undefined {
       protocolVersion: requestedProtocolVersion,
     };
     requestedProtocolVersionsById.delete(response.id);
-
-    return JSON.stringify(response);
   }
 
-  return message;
+  return JSON.stringify(response);
 }
 
 function forwardParentInputToChild(child: childProcess.ChildProcess): void {

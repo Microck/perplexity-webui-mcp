@@ -119,13 +119,17 @@ test("FlareSolverr bridge normalizes initialize protocol for upstream compatibil
     id: 1,
     result: {
       protocolVersion: "2024-11-05",
-      capabilities: {},
+      capabilities: {
+        tools: { listChanged: true },
+        extensions: { "io.modelcontextprotocol/ui": {} },
+      },
       serverInfo: { name: "test", version: "1.0.0" },
     },
   }));
 
   assert.ok(parentMessage);
   assert.equal(JSON.parse(parentMessage).result.protocolVersion, "2025-06-18");
+  assert.equal(JSON.parse(parentMessage).result.capabilities.extensions, undefined);
 
   const passthrough = JSON.stringify({
     jsonrpc: "2.0",
