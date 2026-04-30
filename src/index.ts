@@ -288,7 +288,12 @@ function forwardParentInputToChild(child: childProcess.ChildProcess): void {
         if (line.length > 0) {
           parentOutputMode = "line";
           debugLog(`parent->upstream line ${describeJsonRpcMessage(line)}`);
-          child.stdin?.write(`${normalizeMessageForUpstream(line)}\n`);
+          const normalized = normalizeMessageForUpstream(line);
+          child.stdin?.write(`${normalized}\n`, (error) => {
+            if (error) {
+              debugLog(`stdin write failed: ${error.message}`);
+            }
+          });
         }
 
         continue;
@@ -313,7 +318,11 @@ function forwardParentInputToChild(child: childProcess.ChildProcess): void {
       buffer = buffer.subarray(frameEnd);
       parentOutputMode = "framed";
       debugLog(`parent->upstream frame ${describeJsonRpcMessage(body)}`);
-      child.stdin?.write(`${normalizeMessageForUpstream(body)}\n`);
+      child.stdin?.write(`${normalizeMessageForUpstream(body)}\n`, (error) => {
+        if (error) {
+          debugLog(`stdin write failed: ${error.message}`);
+        }
+      });
     }
   });
 
@@ -546,16 +555,13 @@ function main(): void {
     process.exit(code ?? 1);
   });
 
-  const forwardSignal = (signal: NodeJS.Signals) => {
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as NodeJS.Signals[]) {
     process.on(signal, () => {
       if (!child.killed) {
         child.kill(signal);
       }
     });
-  };
-
-  forwardSignal("SIGINT");
-  forwardSignal("SIGTERM");
+  }
 }
 
 const currentEntryPoint = process.argv[1];
