@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
+import nodeUrl from "node:url";
 
 import {
   buildChildEnv,
   buildRunnerArgs,
   formatMessageForParent,
+  isCurrentEntryPoint,
   normalizeMessageForParent,
   normalizeMessageForUpstream,
   shouldUseFlareSolverr,
@@ -98,7 +103,8 @@ test("FlareSolverr mode switches the wrapper to the python bridge", () => {
   assert.equal(args[3], "-c");
   assert.match(args[4] ?? "", /maybe_enable_flaresolverr/);
   assert.match(args[4] ?? "", /ClientConfig\.model_rebuild/);
-  assert.match(args[4] ?? "", /object\.__setattr__\(MODELS\.best, "mode", "copilot"\)/);
+  assert.match(args[4] ?? "", /MODELS\.resolve\("perplexity\/best"\)/);
+  assert.match(args[4] ?? "", /object\.__setattr__\(best_model, "mode", "copilot"\)/);
 });
 
 test("FlareSolverr bridge normalizes initialize protocol for upstream compatibility", () => {
@@ -160,4 +166,21 @@ test("bridge formats parent responses to match the client transport", () => {
     formatMessageForParent(message, "framed"),
     `Content-Length: ${Buffer.byteLength(message, "utf8")}\r\n\r\n${message}`,
   );
+});
+
+test("entrypoint detection follows symlinks from global npm installs", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "perplexity-webui-mcp-test-"));
+  const realEntrypoint = path.join(tempDir, "index.js");
+  const symlinkEntrypoint = path.join(tempDir, "global-index.js");
+
+  fs.writeFileSync(realEntrypoint, "");
+  fs.symlinkSync(realEntrypoint, symlinkEntrypoint);
+
+  const moduleUrl = nodeUrl.pathToFileURL(realEntrypoint).href;
+
+  assert.equal(
+    isCurrentEntryPoint({ argvEntryPoint: symlinkEntrypoint, moduleUrl }),
+    true,
+  );
+  assert.equal(isCurrentEntryPoint({ argvEntryPoint: undefined, moduleUrl }), false);
 });

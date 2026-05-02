@@ -27,7 +27,6 @@ import urllib.request
 
 from curl_cffi.requests import BrowserTypeLiteral
 from perplexity_webui_scraper.config import ClientConfig
-from perplexity_webui_scraper.constants import API_BASE_URL, DEFAULT_HEADERS, SESSION_COOKIE_NAME
 from perplexity_webui_scraper.http import HTTPClient
 from perplexity_webui_scraper.models import MODELS
 
@@ -39,7 +38,12 @@ ClientConfig.model_rebuild(_types_namespace={"BrowserTypeLiteral": BrowserTypeLi
 # as mode="search". Keep the public pplx_ask tool and auto model identifier,
 # but send it through the same copilot request path that the working model
 # tools use.
-object.__setattr__(MODELS.best, "mode", "copilot")
+try:
+    best_model = MODELS.best
+except AttributeError:
+    best_model = MODELS.resolve("perplexity/best")
+
+object.__setattr__(best_model, "mode", "copilot")
 
 
 def maybe_enable_flaresolverr():
@@ -558,8 +562,26 @@ function main(): void {
   forwardSignal("SIGTERM");
 }
 
-const currentEntryPoint = process.argv[1];
+export function isCurrentEntryPoint({
+  argvEntryPoint,
+  moduleUrl,
+}: {
+  argvEntryPoint: string | undefined;
+  moduleUrl: string;
+}): boolean {
+  if (!argvEntryPoint) {
+    return false;
+  }
 
-if (currentEntryPoint && import.meta.url === nodeUrl.pathToFileURL(currentEntryPoint).href) {
+  const modulePath = nodeUrl.fileURLToPath(moduleUrl);
+
+  try {
+    return fs.realpathSync(argvEntryPoint) === fs.realpathSync(modulePath);
+  } catch {
+    return nodeUrl.pathToFileURL(argvEntryPoint).href === moduleUrl;
+  }
+}
+
+if (isCurrentEntryPoint({ argvEntryPoint: process.argv[1], moduleUrl: import.meta.url })) {
   main();
 }
