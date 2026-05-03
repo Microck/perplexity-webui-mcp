@@ -279,7 +279,7 @@ all upstream model tools support `source_focus` values: `web`, `academic`, `soci
 | **token invalid / 401** | get a fresh token from browser cookies |
 | **`uvx` not found** | install uv (`uv --version` should work) |
 | **no answer returned** | check rate limits or whether your account can access the selected model |
-| **clarifying questions error** | deep research mode may request clarifying questions first |
+| **clarifying questions error** | deep research retries once with recommended/default clarification choices; if this still appears, Perplexity rejected the skip and needs a more specific query |
 | **cloudflare challenge / `Just a moment...`** | run flaresolverr and set `PERPLEXITY_FLARESOLVERR_URL=http://127.0.0.1:8191` |
 | **timeout** | deep research can take several minutes - be patient |
 

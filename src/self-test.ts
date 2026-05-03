@@ -77,6 +77,18 @@ result = {
   "deep_research": {"ok": False},
 }
 
+
+def build_auto_clarification_reply(questions):
+  question_lines = [f"- {question}" for question in questions] or ["- No clarification details were provided."]
+
+  return "\n".join([
+    "Proceed with the research now.",
+    "For every clarification question, choose the recommended option when one is marked; otherwise choose the first listed option.",
+    "Do not ask follow-up clarification questions.",
+    "Clarification questions returned by Perplexity:",
+    *question_lines,
+  ])
+
 if not token:
   result["regular"] = {"ok": False, "error": "missing token"}
   result["deep_research"] = {"ok": False, "error": "missing token"}
@@ -116,7 +128,11 @@ try:
       source_focus=[SourceFocus.WEB],
     )
   )
-  deep.ask("Give a concise one-paragraph overview of quantum computing.")
+  try:
+    deep.ask("Give a concise one-paragraph overview of quantum computing.")
+  except ResearchClarifyingQuestionsError as error:
+    deep.ask(build_auto_clarification_reply(error.questions))
+
   answer = (deep.answer or "").strip()
   if answer:
     result["deep_research"] = {
@@ -126,12 +142,6 @@ try:
     }
   else:
     result["deep_research"] = {"ok": False, "error": "empty answer"}
-except ResearchClarifyingQuestionsError as error:
-  result["deep_research"] = {
-    "ok": True,
-    "status": "clarifying_questions",
-    "preview": str(error)[:120],
-  }
 except Exception as error:
   result["deep_research"] = {"ok": False, "error": str(error)}
 

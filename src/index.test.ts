@@ -87,8 +87,23 @@ test("buildChildEnv strips proxy env vars when FlareSolverr mode is enabled", ()
   assert.equal(childEnv.NO_PROXY, undefined);
 });
 
-test("FlareSolverr mode switches the wrapper to the python bridge", () => {
+test("wrapper runs through the python bridge for deep research auto clarification", () => {
   assert.equal(shouldUseFlareSolverr({}), false);
+
+  const args = buildRunnerArgs({});
+
+  assert.equal(args[0], "--from");
+  assert.equal(args[2], "python");
+  assert.equal(args[3], "-c");
+  assert.match(args[4] ?? "", /ask_with_deep_research_auto_clarification/);
+  assert.match(args[4] ?? "", /ResearchClarifyingQuestionsError/);
+  assert.match(
+    args[4] ?? "",
+    /conversation\.ask\(build_auto_clarification_reply\(error\.questions\)\)/,
+  );
+});
+
+test("FlareSolverr mode enables the bridge session patch", () => {
   assert.equal(
     shouldUseFlareSolverr({ PERPLEXITY_FLARESOLVERR_URL: "http://127.0.0.1:8191" }),
     true,

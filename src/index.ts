@@ -7,8 +7,6 @@ import nodeUrl from "node:url";
 const UPSTREAM_FROM =
   process.env.PERPLEXITY_UPSTREAM_FROM ??
   "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod";
-const UPSTREAM_COMMAND =
-  process.env.PERPLEXITY_UPSTREAM_COMMAND ?? "perplexity-webui-scraper-mcp";
 const FLARESOLVERR_URL_KEY = "PERPLEXITY_FLARESOLVERR_URL";
 const FLARESOLVERR_SOLVE_URL_KEY = "PERPLEXITY_FLARESOLVERR_SOLVE_URL";
 const FLARESOLVERR_TIMEOUT_KEY = "PERPLEXITY_FLARESOLVERR_MAX_TIMEOUT";
@@ -117,10 +115,87 @@ def maybe_enable_flaresolverr():
 `;
 }
 
-const FLARESOLVERR_MCP_SCRIPT = String.raw`
+const MCP_SCRIPT = String.raw`
 ${buildFlareSolverrPythonBootstrap()}
 
 maybe_enable_flaresolverr()
+
+# Perplexity deep research can stop on a clarification step before returning a
+# final answer. In MCP usage there is no interactive UI to answer those prompts,
+# so retry the same research thread once with explicit default-selection
+# instructions. The retry uses the upstream Conversation state that already
+# captured backend UUID/read-write token before the clarification exception.
+from typing import Any
+
+from perplexity_webui_scraper import ResearchClarifyingQuestionsError
+from perplexity_webui_scraper.config.conversation import ConversationConfig
+from perplexity_webui_scraper.core.response import Coordinates
+from perplexity_webui_scraper.mcp import tools as mcp_tools
+from perplexity_webui_scraper.mcp.tools import ask as ask_module
+
+
+def build_auto_clarification_reply(questions):
+    question_lines = [f"- {question}" for question in questions] or ["- No clarification details were provided."]
+
+    return "\n".join([
+        "Proceed with the research now.",
+        "For every clarification question, choose the recommended option when one is marked; otherwise choose the first listed option.",
+        "Do not ask follow-up clarification questions.",
+        "Clarification questions returned by Perplexity:",
+        *question_lines,
+    ])
+
+
+def ask_with_deep_research_auto_clarification(
+    client,
+    model,
+    query,
+    search_focus="web",
+    source_focus="web",
+    time_range="all",
+    language="en-US",
+    latitude=None,
+    longitude=None,
+) -> dict[str, Any]:
+    coordinates = None
+
+    if latitude is not None and longitude is not None:
+        coordinates = Coordinates(latitude=latitude, longitude=longitude)
+
+    config = ConversationConfig(
+        model=model.id,
+        search_focus=search_focus,
+        source_focus=source_focus,
+        time_range=time_range,
+        citation_mode="clean",
+        language=language,
+        coordinates=coordinates,
+    )
+
+    conversation = client.create_conversation(config)
+
+    try:
+        conversation.ask(query)
+    except ResearchClarifyingQuestionsError as error:
+        if model.id != "perplexity/deep-research":
+            raise
+
+        conversation.ask(build_auto_clarification_reply(error.questions))
+
+    results = [
+        {"title": result.title, "url": result.url, "snippet": result.snippet}
+        for result in conversation.search_results
+    ]
+
+    return {
+        "answer": conversation.answer,
+        "search_results": results,
+        "conversation_uuid": conversation.uuid,
+    }
+
+
+ask_module._ask = ask_with_deep_research_auto_clarification
+mcp_tools._ask = ask_with_deep_research_auto_clarification
 
 from perplexity_webui_scraper.mcp.server import mcp
 
@@ -495,12 +570,8 @@ export function buildChildEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return childEnv;
 }
 
-export function buildRunnerArgs(env: NodeJS.ProcessEnv): string[] {
-  if (shouldUseFlareSolverr(env)) {
-    return ["--from", UPSTREAM_FROM, "python", "-c", FLARESOLVERR_MCP_SCRIPT];
-  }
-
-  return ["--from", UPSTREAM_FROM, UPSTREAM_COMMAND];
+export function buildRunnerArgs(_env: NodeJS.ProcessEnv): string[] {
+  return ["--from", UPSTREAM_FROM, "python", "-c", MCP_SCRIPT];
 }
 
 function main(): void {
