@@ -63,50 +63,67 @@ def maybe_enable_flaresolverr():
             f"${FLARESOLVERR_TIMEOUT_KEY} must be an integer number of milliseconds: {max_timeout_raw}"
         ) from error
 
-    request = urllib.request.Request(
-        f"{flaresolverr_url.rstrip('/')}/v1",
-        data=json.dumps({
-            "cmd": "request.get",
-            "url": solve_url,
-            "maxTimeout": max_timeout,
-        }).encode(),
-        headers={"Content-Type": "application/json"},
-    )
+    cached_solution = None
 
-    timeout_seconds = max(60.0, max_timeout / 1000 + 30.0)
+    def get_flaresolverr_solution():
+        nonlocal cached_solution
 
-    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-        data = json.load(response)
+        if cached_solution is not None:
+            return cached_solution
 
-    if data.get("status") != "ok":
-        raise RuntimeError(
-            f"FlareSolverr request failed: {data.get('message') or data}"
+        request = urllib.request.Request(
+            f"{flaresolverr_url.rstrip('/')}/v1",
+            data=json.dumps({
+                "cmd": "request.get",
+                "url": solve_url,
+                "maxTimeout": max_timeout,
+            }).encode(),
+            headers={"Content-Type": "application/json"},
         )
 
-    solution = data.get("solution") or {}
-    cookies = solution.get("cookies") or []
+        timeout_seconds = max(60.0, max_timeout / 1000 + 30.0)
 
-    if not cookies:
-        raise RuntimeError("FlareSolverr returned no cookies for Perplexity")
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+            data = json.load(response)
 
-    solved_cookies = {
-        cookie["name"]: cookie["value"]
-        for cookie in cookies
-        if cookie.get("name") and cookie.get("value")
-    }
+        if data.get("status") != "ok":
+            raise RuntimeError(
+                f"FlareSolverr request failed: {data.get('message') or data}"
+            )
 
-    if not solved_cookies:
-        raise RuntimeError("FlareSolverr returned cookies, but none had usable values")
+        solution = data.get("solution") or {}
+        cookies = solution.get("cookies") or []
 
-    user_agent = solution.get("userAgent") or DEFAULT_FLARESOLVERR_UA
+        if not cookies:
+            raise RuntimeError("FlareSolverr returned no cookies for Perplexity")
+
+        solved_cookies = {
+            cookie["name"]: cookie["value"]
+            for cookie in cookies
+            if cookie.get("name") and cookie.get("value")
+        }
+
+        if not solved_cookies:
+            raise RuntimeError("FlareSolverr returned cookies, but none had usable values")
+
+        cached_solution = {
+            "cookies": solved_cookies,
+            "user_agent": solution.get("userAgent") or DEFAULT_FLARESOLVERR_UA,
+        }
+
+        return cached_solution
+
     original_create_session = HTTPClient._create_session
 
-    # Cloudflare ties the clearance cookies to the browser route that solved them.
+    # Cloudflare solving can take tens of seconds. Install the session patch at
+    # startup, but defer the browser solve until a tool call actually creates an
+    # upstream Perplexity session so MCP initialize stays fast.
     def patched_create_session(self, impersonate):
+        solution = get_flaresolverr_solution()
         session = original_create_session(self, impersonate)
-        session.headers["User-Agent"] = user_agent
+        session.headers["User-Agent"] = solution["user_agent"]
 
-        for name, value in solved_cookies.items():
+        for name, value in solution["cookies"].items():
             session.cookies.set(name, value)
 
         return session

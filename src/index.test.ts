@@ -103,7 +103,7 @@ test("wrapper runs through the python bridge for deep research auto clarificatio
   );
 });
 
-test("FlareSolverr mode enables the bridge session patch", () => {
+test("FlareSolverr mode enables the lazy bridge session patch", () => {
   assert.equal(
     shouldUseFlareSolverr({ PERPLEXITY_FLARESOLVERR_URL: "http://127.0.0.1:8191" }),
     true,
@@ -117,6 +117,10 @@ test("FlareSolverr mode enables the bridge session patch", () => {
   assert.equal(args[2], "python");
   assert.equal(args[3], "-c");
   assert.match(args[4] ?? "", /maybe_enable_flaresolverr/);
+  assert.match(args[4] ?? "", /get_flaresolverr_solution/);
+  assert.match(args[4] ?? "", /MCP initialize stays fast/);
+  assert.match(args[4] ?? "", /"user_agent": solution\.get\("userAgent"\)/);
+  assert.match(args[4] ?? "", /solution\["cookies"\]\.items\(\)/);
   assert.match(args[4] ?? "", /ClientConfig\.model_rebuild/);
   assert.match(args[4] ?? "", /MODELS\.resolve\("perplexity\/best"\)/);
   assert.match(args[4] ?? "", /object\.__setattr__\(best_model, "mode", "copilot"\)/);
