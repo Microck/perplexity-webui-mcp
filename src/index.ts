@@ -137,6 +137,30 @@ ${buildFlareSolverrPythonBootstrap()}
 
 maybe_enable_flaresolverr()
 
+# Patch: retry on CF 403 with a fresh session + session pre-flight.
+# Cloudflare intermittently challenges /search/new (~20% of requests).
+# The scraper's _validate_request_access calls /api/auth/session first, which sets
+# cookies that help pass CF on /search/new. After a 403, we recreate the session AND
+# re-run the pre-flight to get fresh cookies, then retry.
+from perplexity_webui_scraper._internal.exceptions import AuthenticationError as _AuthError
+from perplexity_webui_scraper.core import conversation as _conv_module
+from perplexity_webui_scraper.models.registry import MODELS as _MODELS
+
+_orig_ask = _conv_module.Conversation.ask
+def _patched_ask(self, query, model=None, files=None, citation_mode=None, stream=False):
+    last_err = None
+    for _attempt in range(5):
+        try:
+            return _orig_ask(self, query, model, files, citation_mode, stream)
+        except _AuthError as e:
+            last_err = e
+            # Recreate session with fresh chrome impersonation
+            self._http._session.close()
+            self._http._session = self._http._create_session("chrome")
+            continue
+    raise last_err
+_conv_module.Conversation.ask = _patched_ask
+
 # Perplexity deep research can stop on a clarification step before returning a
 # final answer. In MCP usage there is no interactive UI to answer those prompts,
 # so retry the same research thread once with explicit default-selection
