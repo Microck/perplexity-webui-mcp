@@ -137,15 +137,27 @@ ${buildFlareSolverrPythonBootstrap()}
 
 maybe_enable_flaresolverr()
 
-# Patch: retry on CF 403 with a fresh session + session pre-flight.
-# Cloudflare intermittently challenges /search/new (~20% of requests).
-# The scraper's _validate_request_access calls /api/auth/session first, which sets
-# cookies that help pass CF on /search/new. After a 403, we recreate the session AND
-# re-run the pre-flight to get fresh cookies, then retry.
+# Patch: fix CF 403 on /search/new caused by DEFAULT_HEADERS.
+# The scraper sends Content-Type: application/json and Accept: text/event-stream
+# on ALL requests including GET /search/new. Cloudflare flags this as non-browser
+# behavior and returns 403. Fix: override _create_session to strip those headers
+# so curl_cffi's chrome impersonation headers are used instead.
 from perplexity_webui_scraper._internal.exceptions import AuthenticationError as _AuthError
 from perplexity_webui_scraper.core import conversation as _conv_module
 from perplexity_webui_scraper.models.registry import MODELS as _MODELS
+from perplexity_webui_scraper.http.client import HTTPClient as _HTTPClient
 
+_orig_create_session = _HTTPClient._create_session
+
+def _patched_create_session(self, impersonate):
+    session = _orig_create_session(self, impersonate)
+    session.headers.pop('Content-Type', None)
+    session.headers.pop('Accept', None)
+    return session
+
+_HTTPClient._create_session = _patched_create_session
+
+# Retry on 403 with fresh session as additional safety net.
 _orig_ask = _conv_module.Conversation.ask
 def _patched_ask(self, query, model=None, files=None, citation_mode=None, stream=False):
     last_err = None
@@ -154,7 +166,6 @@ def _patched_ask(self, query, model=None, files=None, citation_mode=None, stream
             return _orig_ask(self, query, model, files, citation_mode, stream)
         except _AuthError as e:
             last_err = e
-            # Recreate session with fresh chrome impersonation
             self._http._session.close()
             self._http._session = self._http._create_session("chrome")
             continue
