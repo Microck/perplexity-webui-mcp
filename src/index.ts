@@ -138,10 +138,13 @@ ${buildFlareSolverrPythonBootstrap()}
 maybe_enable_flaresolverr()
 
 # Patch: fix CF 403 on /search/new caused by DEFAULT_HEADERS.
-# The scraper sends Content-Type: application/json and Accept: text/event-stream
-# on ALL requests including GET /search/new. Cloudflare flags this as non-browser
-# behavior and returns 403. Fix: override _create_session to strip those headers
-# so curl_cffi's chrome impersonation headers are used instead.
+# The scraper applies DEFAULT_HEADERS (Accept: text/event-stream, Content-Type:
+# application/json, Referer, Origin) to ALL requests including GET /search/new.
+# curl_cffi's chrome impersonation already sets browser-correct headers for each
+# request method. Any custom header overrides break the TLS/JA3->HTTP header
+# fingerprint match that Cloudflare validates, resulting in 403 on /search/new.
+# Fix: clear ALL custom headers from the session so curl_cffi's impersonated
+# browser profile is the sole source of headers.
 from perplexity_webui_scraper._internal.exceptions import AuthenticationError as _AuthError
 from perplexity_webui_scraper.core import conversation as _conv_module
 from perplexity_webui_scraper.models.registry import MODELS as _MODELS
@@ -151,8 +154,10 @@ _orig_create_session = _HTTPClient._create_session
 
 def _patched_create_session(self, impersonate):
     session = _orig_create_session(self, impersonate)
-    session.headers.pop('Content-Type', None)
-    session.headers.pop('Accept', None)
+    # Clear ALL DEFAULT_HEADERS overrides — curl_cffi's chrome impersonation
+    # sets proper Accept, Content-Type, Referer, Origin for each request method.
+    for key in list(session.headers.keys()):
+        session.headers.pop(key, None)
     return session
 
 _HTTPClient._create_session = _patched_create_session
